@@ -20682,3 +20682,110 @@ FROM roles
 2026-02-14 16:33:49,499 | auth_service | INFO | [generated in 0.00072s] {}
 2026-02-14 16:33:49,499 | auth_service | INFO | COMMIT
 2026-02-14 16:34:09,153 | auth_service | INFO | Auth service shutting down...
+2026-02-14 16:34:10,354 | auth_service | INFO | select pg_catalog.version()
+2026-02-14 16:34:10,354 | auth_service | INFO | [raw sql] {}
+2026-02-14 16:34:10,354 | auth_service | INFO | select current_schema()
+2026-02-14 16:34:10,354 | auth_service | INFO | [raw sql] {}
+2026-02-14 16:34:10,354 | auth_service | INFO | show standard_conforming_strings
+2026-02-14 16:34:10,354 | auth_service | INFO | [raw sql] {}
+2026-02-14 16:34:10,354 | auth_service | INFO | Database connection successful.
+2026-02-14 16:34:10,407 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:10,421 | auth_service | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-02-14 16:34:10,421 | auth_service | INFO | [generated in 0.00057s] {'table_name': 'users', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-02-14 16:34:10,421 | auth_service | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-02-14 16:34:10,421 | auth_service | INFO | [cached since 0.004351s ago] {'table_name': 'roles', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-02-14 16:34:10,421 | auth_service | INFO | SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-02-14 16:34:10,421 | auth_service | INFO | [cached since 0.005678s ago] {'table_name': 'user_roles', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-02-14 16:34:10,421 | auth_service | INFO | COMMIT
+2026-02-14 16:34:10,421 | auth_service | INFO | Database tables created successfully
+2026-02-14 16:34:10,421 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:10,421 | auth_service | INFO | SELECT roles.id, roles.name, roles.description 
+FROM roles
+2026-02-14 16:34:10,421 | auth_service | INFO | [generated in 0.00036s] {}
+2026-02-14 16:34:10,421 | auth_service | INFO | COMMIT
+2026-02-14 16:34:43,709 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:43,709 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:43,709 | auth_service | INFO | [generated in 0.00084s] {'id_1': '73a2dabc-c699-4f7b-b785-fa84cb94bde7'}
+2026-02-14 16:34:43,735 | auth_service | INFO | SELECT roles.id AS roles_id, roles.name AS roles_name, roles.description AS roles_description 
+FROM roles, user_roles 
+WHERE %(param_1)s::UUID = user_roles.user_id AND roles.id = user_roles.role_id
+2026-02-14 16:34:43,735 | auth_service | INFO | [generated in 0.00057s] {'param_1': UUID('73a2dabc-c699-4f7b-b785-fa84cb94bde7')}
+2026-02-14 16:34:43,735 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:43,742 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:43,742 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:43,742 | auth_service | INFO | [cached since 0.02157s ago] {'id_1': '73a2dabc-c699-4f7b-b785-fa84cb94bde7'}
+2026-02-14 16:34:43,742 | auth_service | INFO | SELECT roles.id AS roles_id, roles.name AS roles_name, roles.description AS roles_description 
+FROM roles, user_roles 
+WHERE %(param_1)s::UUID = user_roles.user_id AND roles.id = user_roles.role_id
+2026-02-14 16:34:43,742 | auth_service | INFO | [cached since 0.00999s ago] {'param_1': UUID('73a2dabc-c699-4f7b-b785-fa84cb94bde7')}
+2026-02-14 16:34:43,742 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:44,116 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:44,116 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:44,116 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:44,120 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:44,120 | auth_service | INFO | [cached since 0.3986s ago] {'id_1': '73a2dabc-c699-4f7b-b785-fa84cb94bde7'}
+2026-02-14 16:34:44,121 | auth_service | INFO | [cached since 0.3989s ago] {'id_1': '73a2dabc-c699-4f7b-b785-fa84cb94bde7'}
+2026-02-14 16:34:44,124 | auth_service | INFO | SELECT users.username 
+FROM users 
+WHERE lower(users.username) IN (%(lower_1_1)s)
+2026-02-14 16:34:44,124 | auth_service | INFO | SELECT users.username 
+FROM users 
+WHERE lower(users.username) IN (%(lower_1_1)s)
+2026-02-14 16:34:44,125 | auth_service | INFO | [generated in 0.00096s] {'lower_1_1': 'shubham123'}
+2026-02-14 16:34:44,125 | auth_service | INFO | [cached since 0.001289s ago] {'lower_1_1': 'someone'}
+2026-02-14 16:34:44,126 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:44,126 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:51,089 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:51,089 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:51,089 | auth_service | INFO | [cached since 7.374s ago] {'id_1': '004df53f-de0c-48fe-b209-17c8b561149e'}
+2026-02-14 16:34:51,096 | auth_service | INFO | SELECT roles.id AS roles_id, roles.name AS roles_name, roles.description AS roles_description 
+FROM roles, user_roles 
+WHERE %(param_1)s::UUID = user_roles.user_id AND roles.id = user_roles.role_id
+2026-02-14 16:34:51,096 | auth_service | INFO | [cached since 7.362s ago] {'param_1': UUID('004df53f-de0c-48fe-b209-17c8b561149e')}
+2026-02-14 16:34:51,096 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:51,096 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:51,103 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:51,103 | auth_service | INFO | [cached since 7.382s ago] {'id_1': '004df53f-de0c-48fe-b209-17c8b561149e'}
+2026-02-14 16:34:51,106 | auth_service | INFO | SELECT roles.id AS roles_id, roles.name AS roles_name, roles.description AS roles_description 
+FROM roles, user_roles 
+WHERE %(param_1)s::UUID = user_roles.user_id AND roles.id = user_roles.role_id
+2026-02-14 16:34:51,106 | auth_service | INFO | [cached since 7.371s ago] {'param_1': UUID('004df53f-de0c-48fe-b209-17c8b561149e')}
+2026-02-14 16:34:51,109 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:51,463 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:51,463 | auth_service | INFO | BEGIN (implicit)
+2026-02-14 16:34:51,463 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:51,463 | auth_service | INFO | SELECT users.id, users.username, users.email, users.hashed_password, users.full_name, users.avatar_url, users.bio, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = %(id_1)s::UUID
+2026-02-14 16:34:51,463 | auth_service | INFO | [cached since 7.745s ago] {'id_1': '004df53f-de0c-48fe-b209-17c8b561149e'}
+2026-02-14 16:34:51,463 | auth_service | INFO | [cached since 7.745s ago] {'id_1': '004df53f-de0c-48fe-b209-17c8b561149e'}
+2026-02-14 16:34:51,463 | auth_service | INFO | SELECT users.username 
+FROM users 
+WHERE lower(users.username) IN (%(lower_1_1)s)
+2026-02-14 16:34:51,463 | auth_service | INFO | SELECT users.username 
+FROM users 
+WHERE lower(users.username) IN (%(lower_1_1)s)
+2026-02-14 16:34:51,469 | auth_service | INFO | [cached since 7.346s ago] {'lower_1_1': 'shubham123'}
+2026-02-14 16:34:51,469 | auth_service | INFO | [cached since 7.347s ago] {'lower_1_1': 'someone'}
+2026-02-14 16:34:51,473 | auth_service | INFO | ROLLBACK
+2026-02-14 16:34:51,473 | auth_service | INFO | ROLLBACK
