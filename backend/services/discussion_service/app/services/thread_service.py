@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from backend.services.discussion_service.app.models.thread import Thread
+from backend.services.discussion_service.app.models.comment import Comment
 from backend.services.discussion_service.app.repositories.thread_repositories import ThreadRepository
 from backend.services.discussion_service.app.repositories.like_repository import LikeRepository
 from backend.services.discussion_service.app.core.events import publish_event
@@ -48,6 +49,40 @@ class ThreadService:
                 thread.author_name = user.full_name
                 thread.author_avatar = user.avatar_url
 
+    def _attach_comment_count(self, thread: Thread) -> None:
+        if not hasattr(self.db, "scalar") or not hasattr(thread, "id"):
+            return
+        thread.comment_count = (
+            self.db.scalar(
+                select(func.count()).where(
+                    Comment.thread_id == thread.id,
+                    Comment.is_deleted == False,
+                )
+            )
+            or 0
+        )
+
+    def _attach_comment_counts_for_threads(self, threads: list[Thread]) -> None:
+        if not threads or not hasattr(self.db, "execute"):
+            return
+        thread_ids = [thread.id for thread in threads if hasattr(thread, "id")]
+        if not thread_ids:
+            return
+
+        rows = list(
+            self.db.execute(
+                select(Comment.thread_id, func.count(Comment.id))
+                .where(
+                    Comment.thread_id.in_(thread_ids),
+                    Comment.is_deleted == False,
+                )
+                .group_by(Comment.thread_id)
+            ).all()
+        )
+        count_map = {thread_id: count for thread_id, count in rows}
+        for thread in threads:
+            thread.comment_count = int(count_map.get(thread.id, 0))
+
 
     def create_thread(self, title: str, description: str, author_id: UUID) -> Thread:
         thread = Thread(
@@ -59,6 +94,7 @@ class ThreadService:
         created_thread = self.thread_repo.create(thread)
 
         created_thread.like_count = 0
+        created_thread.comment_count = 0
         created_thread.is_liked_by_current_user = False
         self._attach_author_data(created_thread)
 
@@ -99,6 +135,7 @@ class ThreadService:
         like_repo = LikeRepository(self.db)
 
         thread.like_count = like_repo.count_thread_likes(thread_id)
+        self._attach_comment_count(thread)
         thread.is_liked_by_current_user = (
             like_repo.is_thread_liked_by_user(thread_id, current_user.id)
             if current_user
@@ -123,6 +160,7 @@ class ThreadService:
                 if current_user
                 else False
             )
+        self._attach_comment_counts_for_threads(threads)
         self._attach_author_data_for_threads(threads)
 
         return {
@@ -146,6 +184,7 @@ class ThreadService:
                 if current_user
                 else False
             )
+        self._attach_comment_counts_for_threads(threads)
         self._attach_author_data_for_threads(threads)
 
         return {
@@ -196,6 +235,7 @@ class ThreadService:
         
         like_repo = LikeRepository(self.db)
         updated_thread.like_count = like_repo.count_thread_likes(thread.id)
+        self._attach_comment_count(updated_thread)
         updated_thread.is_liked_by_current_user = like_repo.is_thread_liked_by_user(
             thread.id,
             current_user.id,

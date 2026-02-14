@@ -26,6 +26,7 @@ class ThreadRead(ThreadBase):
     created_at: datetime
     updated_at: datetime
     like_count: int
+    comment_count: int = 0
     is_liked_by_current_user: bool
 
     model_config = ConfigDict(from_attributes=True)
