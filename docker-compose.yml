@@ -1,0 +1,166 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: forum-postgres
+    environment:
+      POSTGRES_DB: ${DOCKER_POSTGRES_DB:-forumdb}
+      POSTGRES_USER: ${DOCKER_POSTGRES_USER:-forum}
+      POSTGRES_PASSWORD: ${DOCKER_POSTGRES_PASSWORD:-forum}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DOCKER_POSTGRES_USER:-forum} -d ${DOCKER_POSTGRES_DB:-forumdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: forum-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  auth_service:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: forum-auth
+    command: uvicorn backend.services.auth_service.app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg2://forum:forum@postgres:5432/forumdb}
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-replace-with-a-long-random-secret}
+      DEBUG: ${DOCKER_DEBUG:-false}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${DOCKER_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${DOCKER_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      RESET_TOKEN_EXPIRE_MINUTES: ${DOCKER_RESET_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+      REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - auth_uploads:/app/backend/services/auth_service/app/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  discussion_service:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: forum-discussion
+    command: uvicorn backend.services.discussion_service.app.main:app --host 0.0.0.0 --port 8001
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg2://forum:forum@postgres:5432/forumdb}
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-replace-with-a-long-random-secret}
+      DEBUG: ${DOCKER_DEBUG:-false}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${DOCKER_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${DOCKER_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      RESET_TOKEN_EXPIRE_MINUTES: ${DOCKER_RESET_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+      REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+    volumes:
+      - discussion_uploads:/app/backend/services/discussion_service/app/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  realtime_service:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: forum-realtime
+    command: uvicorn backend.services.realtime_service.app.main:app --host 0.0.0.0 --port 8002
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg2://forum:forum@postgres:5432/forumdb}
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-replace-with-a-long-random-secret}
+      DEBUG: ${DOCKER_DEBUG:-false}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${DOCKER_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${DOCKER_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      RESET_TOKEN_EXPIRE_MINUTES: ${DOCKER_RESET_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+      REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+    ports:
+      - "8002:8002"
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+
+  notification_service:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: forum-notification
+    command: uvicorn backend.services.notification_service.app.main:app --host 0.0.0.0 --port 8003
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg2://forum:forum@postgres:5432/forumdb}
+      SECRET_KEY: ${DOCKER_SECRET_KEY:-replace-with-a-long-random-secret}
+      DEBUG: ${DOCKER_DEBUG:-false}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${DOCKER_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${DOCKER_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      RESET_TOKEN_EXPIRE_MINUTES: ${DOCKER_RESET_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+      REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_AUTH_URL: ${DOCKER_VITE_AUTH_URL:-http://localhost:8000}
+        VITE_DISCUSSION_URL: ${DOCKER_VITE_DISCUSSION_URL:-http://localhost:8001}
+        VITE_REALTIME_URL: ${DOCKER_VITE_REALTIME_URL:-http://localhost:8002}
+        VITE_NOTIFICATION_URL: ${DOCKER_VITE_NOTIFICATION_URL:-http://localhost:8003}
+        VITE_WS_BASE: ${DOCKER_VITE_WS_BASE:-ws://localhost:8002}
+    container_name: forum-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      auth_service:
+        condition: service_healthy
+      discussion_service:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  auth_uploads:
+  discussion_uploads:

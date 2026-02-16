@@ -12,6 +12,9 @@ import CreateThreadPage from "../pages/CreateThreadPage";
 import ThreadPage from "../pages/ThreadPage";
 import SearchPage from "../pages/SearchPage";
 import ProfilePage from "../pages/ProfilePage";
+import SettingsPage from "../pages/SettingsPage";
+import MyThreadsPage from "../pages/MyThreadsPage";
+import MyActivityPage from "../pages/MyActivityPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import AdminDashboard from "../pages/AdminDashboard";
 import ModerationPage from "../pages/ModerationPage";
@@ -32,6 +35,9 @@ export default function AppRoutes() {
         <Route path="/threads/:threadId" element={<ThreadPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/my-threads" element={<MyThreadsPage />} />
+        <Route path="/my-activity" element={<MyActivityPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Moderator routes */}

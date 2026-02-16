@@ -2,12 +2,14 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 
 from backend.services.discussion_service.app.models.like import Like
 from backend.services.discussion_service.app.repositories.like_repository import LikeRepository
 from backend.services.discussion_service.app.services.thread_service import ThreadService
 from backend.services.discussion_service.app.repositories.comment_repositories import CommentRepository
 from backend.services.discussion_service.app.core.events import publish_event
+from backend.services.auth_service.app.models.user import User
 
 class LikeService:
 
@@ -16,6 +18,31 @@ class LikeService:
         self.repo = LikeRepository(db)
         self.thread_service = ThreadService(db)
         self.comment_repo = CommentRepository(db)
+
+    def list_thread_likers(self, thread_id: UUID):
+        # Validate thread exists
+        self.thread_service.get_thread(thread_id)
+
+        users = list(
+            self.db.execute(
+                select(User)
+                .join(Like, Like.user_id == User.id)
+                .where(Like.thread_id == thread_id)
+                .order_by(Like.created_at.desc())
+            ).scalars()
+        )
+
+        return {
+            "items": [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "full_name": user.full_name,
+                    "avatar_url": user.avatar_url,
+                }
+                for user in users
+            ]
+        }
 
     def toggle_thread_like(self, thread_id: UUID, user_id: UUID):
 

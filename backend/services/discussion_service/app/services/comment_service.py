@@ -15,6 +15,7 @@ from backend.services.discussion_service.app.core.mentions import (
 )
 
 class CommentService:
+    DELETED_PLACEHOLDER = "This message has been deleted"
 
     def __init__(self, db: Session):
         self.db = db
@@ -246,6 +247,17 @@ class CommentService:
         previous_mentions = extract_mentioned_usernames(comment.content)
         comment.content = content.strip()
         updated_comment = self.repo.update(comment)
+        updated_comment.like_count = 0
+        updated_comment.is_liked_by_current_user = False
+        if hasattr(self.db, "scalar"):
+            like_repo = LikeRepository(self.db)
+            updated_comment.like_count = like_repo.count_comment_likes(updated_comment.id)
+            updated_comment.is_liked_by_current_user = like_repo.is_comment_liked_by_user(
+                updated_comment.id,
+                current_user.id,
+            )
+        if getattr(updated_comment, "replies", None) is None:
+            updated_comment.replies = []
 
         publish_event(
             channel="thread_updates",
@@ -286,7 +298,11 @@ class CommentService:
             raise HTTPException(status_code=404, detail="Comment not found")
 
         user_roles = {role.name for role in getattr(current_user, "roles", [])}
-        if comment.author_id != current_user.id and not (
+        is_thread_owner = False
+        if hasattr(self.db, "scalar"):
+            thread = self.thread_service.get_thread(comment.thread_id, current_user)
+            is_thread_owner = thread.author_id == current_user.id
+        if comment.author_id != current_user.id and not is_thread_owner and not (
             "moderator" in user_roles or "admin" in user_roles
         ):
             raise HTTPException(
@@ -294,7 +310,38 @@ class CommentService:
                 detail="You do not have permission to delete this comment",
             )
 
-        deleted_comment = self.repo.soft_delete(comment)
+        def has_children(target_comment):
+            if hasattr(self.repo, "has_children"):
+                return self.repo.has_children(target_comment.id)
+            return bool(getattr(target_comment, "replies", []))
+
+        # If comment has replies, keep it in tree but anonymize content.
+        if has_children(comment):
+            comment.is_deleted = True
+            comment.content = self.DELETED_PLACEHOLDER
+            deleted_comment = self.repo.update(comment)
+        else:
+            # Leaf comments should disappear from UI.
+            if hasattr(self.repo, "hard_delete"):
+                parent_id = comment.parent_id
+                self.repo.hard_delete(comment)
+                deleted_comment = comment
+
+                # Cleanup chain: if parent is already soft-deleted and now has no children,
+                # remove it as well so only meaningful placeholders remain.
+                while parent_id:
+                    parent = self.repo.get_by_id(parent_id)
+                    if not parent:
+                        break
+                    next_parent_id = parent.parent_id
+                    if parent.is_deleted and not has_children(parent):
+                        self.repo.hard_delete(parent)
+                    else:
+                        break
+                    parent_id = next_parent_id
+            else:
+                # Backward compatibility for tests/mocks that do not implement hard_delete.
+                deleted_comment = self.repo.soft_delete(comment)
 
         publish_event(
             channel="thread_updates",

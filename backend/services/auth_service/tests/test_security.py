@@ -5,7 +5,7 @@ from uuid import uuid4
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-with-at-least-32-bytes")
 
-from backend.services.auth_service.app.core.security import (  # noqa: E402
+from backend.services.auth_service.app.core.security import (  
     create_access_token,
     create_new_access_token_from_refresh,
     create_refresh_token,

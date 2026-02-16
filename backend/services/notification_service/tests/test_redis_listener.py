@@ -34,6 +34,9 @@ def test_handle_mention_creates_notification_and_publishes(monkeypatch):
         def close(self):
             return None
 
+        def scalar(self, _query):
+            return None
+
     class FakeRepo:
         def __init__(self, _db):
             pass
@@ -54,7 +57,7 @@ def test_handle_mention_creates_notification_and_publishes(monkeypatch):
     asyncio.run(redis_listener.handle_event(event))
 
     assert len(created) == 1
-    assert created[0].type == "mention"
+    assert created[0].type == "mention.comment"
     assert len(published) == 1
     assert published[0][0] == "user_notifications"
 
@@ -75,6 +78,9 @@ def test_handle_mention_missing_fields_returns_without_publishing(monkeypatch):
 
     class FakeDB:
         def close(self):
+            return None
+
+        def scalar(self, _query):
             return None
 
     class FakeRepo:
@@ -118,6 +124,9 @@ def test_handle_thread_liked_creates_notification_and_publishes(monkeypatch):
         def close(self):
             return None
 
+        def scalar(self, _query):
+            return None
+
     class FakeRepo:
         def __init__(self, _db):
             pass
@@ -144,6 +153,163 @@ def test_handle_thread_liked_creates_notification_and_publishes(monkeypatch):
     assert published[0][1]["event"] == "thread.liked"
 
 
+def test_handle_thread_liked_deduplicates_existing_notification(monkeypatch):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    thread_id = uuid4()
+
+    event = {
+        "event": "thread.liked",
+        "thread_id": str(thread_id),
+        "actor_id": str(actor_id),
+        "payload": {"owner_id": str(owner_id)},
+    }
+
+    created = []
+    published = []
+    exists_calls = []
+
+    class FakeDB:
+        def close(self):
+            return None
+
+        def scalar(self, _query):
+            return None
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        def exists_notification(self, **_kwargs):
+            exists_calls.append(_kwargs)
+            return True
+
+        def create(self, notification):
+            created.append(notification)
+            return notification
+
+    class FakeRedis:
+        async def publish(self, channel, message):
+            published.append((channel, message))
+
+    monkeypatch.setattr(redis_listener, "SessionLocal", lambda: FakeDB())
+    monkeypatch.setattr(redis_listener, "NotificationRepository", FakeRepo)
+    monkeypatch.setattr(redis_listener, "redis_client", FakeRedis())
+
+    asyncio.run(redis_listener.handle_event(event))
+
+    assert len(exists_calls) == 1
+    assert exists_calls[0]["within_seconds"] == 30
+    assert created == []
+    assert published == []
+
+
+def test_handle_comment_liked_creates_notification_and_publishes(monkeypatch):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    thread_id = uuid4()
+    comment_id = uuid4()
+
+    event = {
+        "event": "comment.liked",
+        "thread_id": str(thread_id),
+        "actor_id": str(actor_id),
+        "payload": {
+            "owner_id": str(owner_id),
+            "comment_id": str(comment_id),
+        },
+    }
+
+    created = []
+    published = []
+
+    class FakeDB:
+        def close(self):
+            return None
+
+        def scalar(self, _query):
+            return None
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        def exists_notification(self, **_kwargs):
+            return False
+
+        def create(self, notification):
+            notification.id = uuid4()
+            created.append(notification)
+            return notification
+
+    class FakeRedis:
+        async def publish(self, channel, message):
+            published.append((channel, json.loads(message)))
+
+    monkeypatch.setattr(redis_listener, "SessionLocal", lambda: FakeDB())
+    monkeypatch.setattr(redis_listener, "NotificationRepository", FakeRepo)
+    monkeypatch.setattr(redis_listener, "redis_client", FakeRedis())
+
+    asyncio.run(redis_listener.handle_event(event))
+
+    assert len(created) == 1
+    assert created[0].type == "comment.liked"
+    assert len(published) == 1
+    assert published[0][0] == "user_notifications"
+    assert published[0][1]["event"] == "comment.liked"
+
+
+def test_handle_comment_liked_deduplicates_existing_notification(monkeypatch):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    thread_id = uuid4()
+    comment_id = uuid4()
+
+    event = {
+        "event": "comment.liked",
+        "thread_id": str(thread_id),
+        "actor_id": str(actor_id),
+        "payload": {
+            "owner_id": str(owner_id),
+            "comment_id": str(comment_id),
+        },
+    }
+
+    created = []
+    published = []
+
+    class FakeDB:
+        def close(self):
+            return None
+
+        def scalar(self, _query):
+            return None
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        def exists_notification(self, **_kwargs):
+            return True
+
+        def create(self, notification):
+            created.append(notification)
+            return notification
+
+    class FakeRedis:
+        async def publish(self, channel, message):
+            published.append((channel, message))
+
+    monkeypatch.setattr(redis_listener, "SessionLocal", lambda: FakeDB())
+    monkeypatch.setattr(redis_listener, "NotificationRepository", FakeRepo)
+    monkeypatch.setattr(redis_listener, "redis_client", FakeRedis())
+
+    asyncio.run(redis_listener.handle_event(event))
+
+    assert created == []
+    assert published == []
+
+
 def test_handle_comment_replied_creates_notification_and_publishes(monkeypatch):
     receiver_id = uuid4()
     actor_id = uuid4()
@@ -166,6 +332,9 @@ def test_handle_comment_replied_creates_notification_and_publishes(monkeypatch):
 
     class FakeDB:
         def close(self):
+            return None
+
+        def scalar(self, _query):
             return None
 
     class FakeRepo:
@@ -207,6 +376,9 @@ def test_handle_comment_replied_missing_fields_returns_without_publishing(monkey
 
     class FakeDB:
         def close(self):
+            return None
+
+        def scalar(self, _query):
             return None
 
     class FakeRepo:

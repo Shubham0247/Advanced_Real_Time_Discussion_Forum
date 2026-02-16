@@ -1,3 +1,66 @@
-*.venv
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
 .env
-frontend/node_modules
+.env.*
+!.env.example
+!.env.docker.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+backend/.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# -----------------------------
+# Node / Frontend
+# -----------------------------
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# -----------------------------
+# IDE / Editor
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------------
+# Logs / Runtime
+# -----------------------------
+logs/
+*.log
+*.pid
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# User uploads / generated media
+# -----------------------------
+backend/services/auth_service/app/uploads/
+backend/services/discussion_service/app/uploads/

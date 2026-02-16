@@ -1,8 +1,21 @@
 import redis.asyncio as redis
 import json
+import os
 from backend.services.realtime_service.app.websocket.manager import manager
 
-redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
+
+def get_redis_port() -> int:
+    try:
+        return int(os.getenv("REDIS_PORT", "6379"))
+    except ValueError:
+        return 6379
+
+
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=get_redis_port(),
+    decode_responses=True,
+)
 
 async def start_redis_listener():
     print("Starting Redis listener...")

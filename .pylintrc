@@ -1,0 +1,16 @@
+[MASTER]
+ignore=.venv,frontend,node_modules,dist,logs,backend\\__pycache__,backend\\services\\discussion_service\\app\\uploads,backend\\services\\auth_service\\app\\uploads
+ignore-patterns=.*\\.pyc
+
+[MESSAGES CONTROL]
+disable=
+    C0114,
+    C0115,
+    C0116,
+    R0903,
+    C0411,
+    C0412,
+    C0103,
+    C0327,
+    R0913,
+    R0917

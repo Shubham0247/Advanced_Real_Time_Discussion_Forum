@@ -177,7 +177,7 @@ def test_users_me_and_promote_paths(monkeypatch):
 
     monkeypatch.setattr(users_api, "UserRepository", FakeUserRepo)
     db = FakeDB()
-    out = users_api.promote_user(uuid4(), "moderator", db=db, current_user=current_user)
+    out = users_api.promote_user(uuid4(), "moderator", db=db, _current_user=current_user)
     assert out["message"] == "User promoted to moderator"
     assert db.committed is True
 
@@ -205,7 +205,7 @@ def test_users_update_me_partial_fields():
     updated = users_api.update_me(
         user_data=UserUpdate(full_name="New Name"),
         db=db,
-        current_user=user,
+        _current_user=user,
     )
 
     assert updated is user
@@ -239,7 +239,7 @@ def test_users_update_me_empty_payload_keeps_values():
     users_api.update_me(
         user_data=UserUpdate(),
         db=db,
-        current_user=user,
+        _current_user=user,
     )
 
     assert user.full_name == "Current Name"
@@ -266,7 +266,7 @@ def test_users_update_me_allows_nullable_fields():
     users_api.update_me(
         user_data=UserUpdate(avatar_url=None, bio=None),
         db=FakeDB(),
-        current_user=user,
+        _current_user=user,
     )
 
     assert user.avatar_url is None
@@ -283,7 +283,7 @@ def test_users_promote_not_found_and_already_has_role(monkeypatch):
 
     monkeypatch.setattr(users_api, "UserRepository", RepoNone)
     with pytest.raises(HTTPException) as e1:
-        users_api.promote_user(uuid4(), "moderator", db=object(), current_user=object())
+        users_api.promote_user(uuid4(), "moderator", db=object(), _current_user=object())
     assert e1.value.status_code == 404
 
     role_obj = SimpleNamespace(name="moderator")
@@ -307,7 +307,7 @@ def test_users_promote_not_found_and_already_has_role(monkeypatch):
             raise AssertionError("Should not commit for already-has-role path")
 
     monkeypatch.setattr(users_api, "UserRepository", RepoWithRole)
-    out = users_api.promote_user(uuid4(), "moderator", db=FakeDB(), current_user=object())
+    out = users_api.promote_user(uuid4(), "moderator", db=FakeDB(), _current_user=object())
     assert out["message"] == "User already has this role"
 
 
@@ -338,7 +338,7 @@ def test_users_demote_success(monkeypatch):
 
     monkeypatch.setattr(users_api, "UserRepository", FakeUserRepo)
     db = FakeDB()
-    out = users_api.demote_user(uuid4(), "moderator", db=db, current_user=object())
+    out = users_api.demote_user(uuid4(), "moderator", db=db, _current_user=object())
     assert out["message"] == "User demoted from moderator"
     assert target_user.roles == []
     assert db.committed is True
@@ -354,7 +354,7 @@ def test_users_demote_not_found_or_missing_role(monkeypatch):
 
     monkeypatch.setattr(users_api, "UserRepository", RepoNone)
     with pytest.raises(HTTPException) as e1:
-        users_api.demote_user(uuid4(), "moderator", db=object(), current_user=object())
+        users_api.demote_user(uuid4(), "moderator", db=object(), _current_user=object())
     assert e1.value.status_code == 404
 
     role_obj = SimpleNamespace(name="moderator")
@@ -379,7 +379,7 @@ def test_users_demote_not_found_or_missing_role(monkeypatch):
             raise AssertionError("Should not commit when user lacks role")
 
     monkeypatch.setattr(users_api, "UserRepository", RepoWithUser)
-    out = users_api.demote_user(uuid4(), "moderator", db=FakeDB(), current_user=object())
+    out = users_api.demote_user(uuid4(), "moderator", db=FakeDB(), _current_user=object())
     assert out["message"] == "User does not have this role"
 
 
@@ -401,7 +401,7 @@ def test_users_demote_role_not_found(monkeypatch):
 
     monkeypatch.setattr(users_api, "UserRepository", RepoWithUser)
     with pytest.raises(HTTPException) as e:
-        users_api.demote_user(uuid4(), "moderator", db=FakeDB(), current_user=object())
+        users_api.demote_user(uuid4(), "moderator", db=FakeDB(), _current_user=object())
     assert e.value.status_code == 404
 
 
@@ -431,7 +431,7 @@ def test_users_admin_list_endpoint(monkeypatch):
         q="ali",
         role="member",
         db=object(),
-        current_user=object(),
+        _current_user=object(),
     )
     assert out["total"] == 1
     assert out["items"] == fake_items
@@ -465,7 +465,7 @@ def test_users_update_status_endpoint(monkeypatch):
         user_id=user.id,
         status_data=SimpleNamespace(is_active=False),
         db=db,
-        current_user=object(),
+        _current_user=object(),
     )
     assert out["is_active"] is False
     assert db.committed == 1
@@ -486,7 +486,7 @@ def test_users_update_status_not_found(monkeypatch):
             user_id=uuid4(),
             status_data=SimpleNamespace(is_active=False),
             db=object(),
-            current_user=object(),
+            _current_user=object(),
         )
     assert e.value.status_code == 404
 
@@ -627,14 +627,14 @@ def test_user_service_duplicate_and_invalid_login_paths(monkeypatch):
 def test_user_service_authenticate_user_paths():
     user = SimpleNamespace(hashed_password="h")
     service = UserService(SimpleNamespace())
-    service.user_repo = SimpleNamespace(get_by_email=lambda _e: user)
+    service.user_repo = SimpleNamespace(get_by_email_or_username=lambda _e: user)
     service.verify_password = lambda _p, _h: True
     assert service.authenticate_user("a@a.com", "p") is user
 
     service.verify_password = lambda _p, _h: False
     assert service.authenticate_user("a@a.com", "p") is None
 
-    service.user_repo = SimpleNamespace(get_by_email=lambda _e: None)
+    service.user_repo = SimpleNamespace(get_by_email_or_username=lambda _e: None)
     assert service.authenticate_user("a@a.com", "p") is None
 
 

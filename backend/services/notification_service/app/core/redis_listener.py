@@ -1,5 +1,6 @@
 import redis.asyncio as redis
 import json
+import os
 from uuid import UUID
 from sqlalchemy import select
 
@@ -8,7 +9,21 @@ from backend.services.notification_service.app.models.notification import Notifi
 from backend.services.auth_service.app.models.user import User
 from backend.shared.database.session import SessionLocal
 
-redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
+
+def get_redis_port() -> int:
+    try:
+        return int(os.getenv("REDIS_PORT", "6379"))
+    except ValueError:
+        return 6379
+
+
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=get_redis_port(),
+    decode_responses=True,
+)
+
+LIKE_NOTIFICATION_COOLDOWN_SECONDS = 30
 
 
 async def start_notification_listener():
@@ -56,6 +71,17 @@ async def handle_event(event: dict):
             thread_uuid = UUID(thread_id)
             if receiver_id == actor_uuid:
                 return
+            if (
+                hasattr(repo, "exists_notification")
+                and repo.exists_notification(
+                    user_id=receiver_id,
+                    actor_id=actor_uuid,
+                    notification_type="thread.liked",
+                    reference_id=thread_uuid,
+                    within_seconds=LIKE_NOTIFICATION_COOLDOWN_SECONDS,
+                )
+            ):
+                return
 
             notification = Notification(
                 user_id=receiver_id,
@@ -93,6 +119,17 @@ async def handle_event(event: dict):
             actor_uuid = UUID(actor_id)
             thread_uuid = UUID(thread_id)
             if receiver_id == actor_uuid:
+                return
+            if (
+                hasattr(repo, "exists_notification")
+                and repo.exists_notification(
+                    user_id=receiver_id,
+                    actor_id=actor_uuid,
+                    notification_type="comment.liked",
+                    reference_id=thread_uuid,
+                    within_seconds=LIKE_NOTIFICATION_COOLDOWN_SECONDS,
+                )
+            ):
                 return
 
             notification = Notification(

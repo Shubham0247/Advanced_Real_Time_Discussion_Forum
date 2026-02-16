@@ -68,6 +68,16 @@ class CommentRepository:
         self.db.refresh(comment)
         return comment
 
+    def has_children(self, comment_id: UUID) -> bool:
+        query = select(func.count()).select_from(Comment).where(Comment.parent_id == comment_id)
+        return (self.db.scalar(query) or 0) > 0
+
     def soft_delete(self, comment: Comment):
         comment.is_deleted = True
+        self.db.commit()
+        self.db.refresh(comment)
+        return comment
+
+    def hard_delete(self, comment: Comment):
+        self.db.delete(comment)
         self.db.commit()

@@ -39,8 +39,13 @@ class UserUpdate(BaseModel):
 class UserStatusUpdate(BaseModel):
     is_active: bool
 
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=255)
     password: str
 
 class TokenResponse(BaseModel):
@@ -92,3 +97,20 @@ class MentionResolveRequest(BaseModel):
 
 class MentionResolveResponse(BaseModel):
     existing_usernames: List[str]
+
+
+class UserSearchRead(BaseModel):
+    id: UUID
+    username: str
+    full_name: str
+    avatar_url: str | None = None
+    bio: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserSearchResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[UserSearchRead]

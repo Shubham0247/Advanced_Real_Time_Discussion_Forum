@@ -37,19 +37,33 @@ export function useNotificationMutations() {
   const queryClient = useQueryClient();
   const { setUnreadCount } = useNotificationStore();
 
+  const syncUnreadCount = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+    const data = await queryClient.fetchQuery({
+      queryKey: ["unread-count"],
+      queryFn: getUnreadCount,
+      staleTime: 0,
+    });
+    setUnreadCount(data?.unread_count ?? 0);
+  };
+
   const markOneMutation = useMutation({
     mutationFn: markOneRead,
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      setUnreadCount((c) => Math.max(0, c - 1));
+      await syncUnreadCount();
+    },
+    onError: () => {
+      // Re-sync from server if mutation fails to avoid stale badge.
+      syncUnreadCount();
     },
   });
 
   const markAllMutation = useMutation({
     mutationFn: markAllRead,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      setUnreadCount(0);
+      await syncUnreadCount();
       toast.success(`${data.updated_count} notifications marked as read`);
     },
   });

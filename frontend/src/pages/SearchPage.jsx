@@ -1,19 +1,19 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { SearchX } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useThreadSearch } from "../hooks/useThreads";
-import { useCommentSearch } from "../hooks/useComments";
+import { searchUsers } from "../api/authApi";
 import PageWrapper from "../components/layout/PageWrapper";
 import SearchBar from "../components/common/SearchBar";
 import Spinner from "../components/common/Spinner";
 import Pagination from "../components/common/Pagination";
 import EmptyState from "../components/common/EmptyState";
 import ThreadCard from "../components/thread/ThreadCard";
-import { formatDate } from "../utils/formatDate";
+import Avatar from "../components/common/Avatar";
 
 const TABS = [
   { key: "threads", label: "Threads" },
-  { key: "comments", label: "Comments" },
+  { key: "users", label: "Users" },
 ];
 
 export default function SearchPage() {
@@ -23,14 +23,18 @@ export default function SearchPage() {
   const size = 10;
 
   const threadQuery = useThreadSearch(tab === "threads" ? query : "", page, size);
-  const commentQuery = useCommentSearch(tab === "comments" ? query : "", page, size);
+  const userQuery = useQuery({
+    queryKey: ["search-users", query, page],
+    queryFn: () => searchUsers({ q: query, page, size }),
+    enabled: tab === "users" && query.length > 0,
+  });
 
   const handleSearch = (q) => {
     setQuery(q);
     setPage(1);
   };
 
-  const activeQuery = tab === "threads" ? threadQuery : commentQuery;
+  const activeQuery = tab === "threads" ? threadQuery : userQuery;
   const items = activeQuery.data?.items || [];
   const total = activeQuery.data?.total || 0;
   const totalPages = Math.ceil(total / size);
@@ -40,8 +44,9 @@ export default function SearchPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Search</h1>
 
       <SearchBar
-        placeholder="Search threads and comments..."
+        placeholder="Search threads and users..."
         onSearch={handleSearch}
+        onChangeSearch={handleSearch}
         className="mb-4"
       />
 
@@ -71,7 +76,7 @@ export default function SearchPage() {
         <EmptyState
           icon={SearchX}
           title="Start searching"
-          description="Type a keyword and press Enter to search"
+          description="Type a keyword to see live suggestions"
         />
       ) : activeQuery.isLoading ? (
         <div className="flex justify-center py-12">
@@ -97,20 +102,26 @@ export default function SearchPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map((comment) => (
-                <Link
-                  key={comment.id}
-                  to={`/threads/${comment.thread_id}`}
-                  className="block bg-white rounded-xl border border-gray-100 p-4 hover:border-indigo-200 transition-all"
+              {items.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4"
                 >
-                  <p className="text-sm text-gray-700 line-clamp-3">
-                    {comment.content}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {comment.author_username || "User"} &middot;{" "}
-                    {formatDate(comment.created_at)}
-                  </p>
-                </Link>
+                  <Avatar
+                    name={u.full_name || u.username}
+                    avatarUrl={u.avatar_url}
+                    size="md"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {u.full_name || u.username}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">@{u.username}</p>
+                    {u.bio && (
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{u.bio}</p>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}

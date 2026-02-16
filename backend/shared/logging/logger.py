@@ -2,7 +2,7 @@ import logging
 import sys
 from pathlib import Path
 
-def setup_logging(service_name: str, debug: bool = False) -> None:   
+def setup_logging(service_name: str, debug: bool = False) -> None:
     """
     Configure application-wide logging.
     Logs are written to STDOUT (Docker-friendly).
@@ -23,6 +23,6 @@ def setup_logging(service_name: str, debug: bool = False) -> None:
 
     logging.basicConfig(
             level=logging.INFO,
-            format= f"%(asctime)s | {service_name} | %(levelname)s | %(message)s",
+            format=f"%(asctime)s | {service_name} | %(levelname)s | %(message)s",
             handlers=handlers,
     )

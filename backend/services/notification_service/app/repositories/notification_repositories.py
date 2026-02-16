@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from typing import List
 from uuid import UUID
+from datetime import datetime, timezone, timedelta
 
 from backend.services.notification_service.app.models.notification import Notification
 
@@ -72,3 +73,25 @@ class NotificationRepository:
             notification.is_read = True
         self.db.commit()
         return len(notifications)
+
+    def exists_notification(
+        self,
+        *,
+        user_id: UUID,
+        actor_id: UUID,
+        notification_type: str,
+        reference_id: UUID,
+        within_seconds: int | None = None,
+    ) -> bool:
+        filters = [
+            Notification.user_id == user_id,
+            Notification.actor_id == actor_id,
+            Notification.type == notification_type,
+            Notification.reference_id == reference_id,
+        ]
+        if within_seconds is not None and within_seconds > 0:
+            cutoff = datetime.now(timezone.utc) - timedelta(seconds=within_seconds)
+            filters.append(Notification.created_at >= cutoff)
+
+        query = select(Notification.id).where(*filters).limit(1)
+        return self.db.scalar(query) is not None

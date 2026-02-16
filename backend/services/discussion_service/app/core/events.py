@@ -2,8 +2,21 @@ import redis
 import json
 from datetime import datetime, timezone
 import uuid
+import os
 
-redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
+
+def get_redis_port() -> int:
+    try:
+        return int(os.getenv("REDIS_PORT", "6379"))
+    except ValueError:
+        return 6379
+
+
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=get_redis_port(),
+    decode_responses=True,
+)
 
 
 def publish_event(

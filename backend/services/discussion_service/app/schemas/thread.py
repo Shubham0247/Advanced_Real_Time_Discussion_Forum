@@ -6,6 +6,7 @@ from typing import List
 class ThreadBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
     description: str = Field(..., min_length=1)
+    image_url: str | None = None
 
 class ThreadCreate(ThreadBase):
     pass
@@ -13,6 +14,7 @@ class ThreadCreate(ThreadBase):
 class ThreadUpdate(BaseModel):
     title: str | None = Field(None, min_length=3, max_length=255)
     description: str | None = Field(None, min_length=1)
+    image_url: str | None = None
     is_locked: bool | None = None
 
 class ThreadRead(ThreadBase):
@@ -23,6 +25,7 @@ class ThreadRead(ThreadBase):
     author_avatar: str | None = None
     is_deleted: bool
     is_locked: bool
+    moderation_status: str = "pending"
     created_at: datetime
     updated_at: datetime
     like_count: int

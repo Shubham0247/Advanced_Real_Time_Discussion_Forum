@@ -13,6 +13,7 @@ import SearchBar from "../components/common/SearchBar";
 import Spinner from "../components/common/Spinner";
 import Pagination from "../components/common/Pagination";
 import UserRow from "../components/moderation/UserRow";
+import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
 export default function AdminDashboard() {
   const [page, setPage] = useState(1);
@@ -39,19 +40,19 @@ export default function AdminDashboard() {
     mutationFn: ({ userId, isActive }) =>
       adminUpdateUserStatus(userId, isActive),
     onSuccess: () => { invalidateUsers(); toast.success("User status updated"); },
-    onError: (err) => toast.error(err.response?.data?.detail || "Failed"),
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed")),
   });
 
   const promoteMutation = useMutation({
     mutationFn: ({ userId, roleName }) => adminPromoteUser(userId, roleName),
     onSuccess: () => { invalidateUsers(); toast.success("User promoted"); },
-    onError: (err) => toast.error(err.response?.data?.detail || "Failed"),
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed")),
   });
 
   const demoteMutation = useMutation({
     mutationFn: ({ userId, roleName }) => adminDemoteUser(userId, roleName),
     onSuccess: () => { invalidateUsers(); toast.success("Role removed"); },
-    onError: (err) => toast.error(err.response?.data?.detail || "Failed"),
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed")),
   });
 
   const users = data?.items || [];

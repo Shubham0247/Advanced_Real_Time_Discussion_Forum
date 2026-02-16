@@ -47,3 +47,32 @@ def test_repository_get_user_notifications_returns_scalars():
     repo = NotificationRepository(FakeDB())
     out = repo.get_user_notifications(uuid4())
     assert out == rows
+
+
+def test_repository_exists_notification_returns_boolean():
+    class FakeDB:
+        def __init__(self):
+            self.result = None
+
+        def scalar(self, _query):
+            return self.result
+
+    db = FakeDB()
+    repo = NotificationRepository(db)
+
+    db.result = object()
+    assert repo.exists_notification(
+        user_id=uuid4(),
+        actor_id=uuid4(),
+        notification_type="thread.liked",
+        reference_id=uuid4(),
+        within_seconds=30,
+    ) is True
+
+    db.result = None
+    assert repo.exists_notification(
+        user_id=uuid4(),
+        actor_id=uuid4(),
+        notification_type="comment.liked",
+        reference_id=uuid4(),
+    ) is False

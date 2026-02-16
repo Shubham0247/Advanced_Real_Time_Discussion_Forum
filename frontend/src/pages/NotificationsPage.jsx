@@ -37,9 +37,13 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleOpenNotification = (notification) => {
+  const handleOpenNotification = async (notification) => {
     if (!notification.is_read) {
-      markOneMutation.mutate(notification.id);
+      try {
+        await markOneMutation.mutateAsync(notification.id);
+      } catch {
+        // If mark-read fails, still allow opening the notification target.
+      }
     }
     const route = getNotificationRoute(notification);
     if (route) {

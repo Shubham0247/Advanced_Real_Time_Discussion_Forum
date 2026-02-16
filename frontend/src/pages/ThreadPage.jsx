@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import useAuthStore from "../stores/authStore";
 import { useThread, useThreadMutations } from "../hooks/useThreads";
 import { useCommentList, useCommentMutations, buildCommentTree } from "../hooks/useComments";
+import { getThreadLikers } from "../api/likeApi";
+import { uploadThreadImage } from "../api/threadApi";
 import useThreadWebSocket from "../hooks/useThreadWebSocket";
 import PageWrapper from "../components/layout/PageWrapper";
 import Spinner from "../components/common/Spinner";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
 import Modal from "../components/common/Modal";
+import SearchBar from "../components/common/SearchBar";
 import ThreadDetail from "../components/thread/ThreadDetail";
 import CommentForm from "../components/comment/CommentForm";
 import CommentTree from "../components/comment/CommentTree";
@@ -25,8 +30,10 @@ export default function ThreadPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "" });
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
   const [commentText, setCommentText] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
+  const [commentSearch, setCommentSearch] = useState("");
 
   // ---- Fetch data ----
   const {
@@ -36,6 +43,11 @@ export default function ThreadPage() {
   } = useThread(threadId);
 
   const { comments, isLoading: commentsLoading } = useCommentList(threadId);
+  const { data: likersData, isLoading: likersLoading } = useQuery({
+    queryKey: ["thread-likers", threadId, thread?.like_count],
+    queryFn: () => getThreadLikers(threadId),
+    enabled: !!threadId,
+  });
 
   // ---- Mutations ----
   const { updateMutation, deleteMutation, likeMutation } =
@@ -43,35 +55,64 @@ export default function ThreadPage() {
 
   const { createMutation: commentMutation } = useCommentMutations(threadId);
 
-  // Scroll to #comments section if URL hash is present
+  // Scroll to and focus comment input if URL hash is present
   useEffect(() => {
     if (location.hash === "#comments" && !commentsLoading) {
-      const el = document.getElementById("comments");
-      if (el) {
-        setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
-      }
+      setTimeout(() => {
+        const commentInput = document.getElementById("comment-input");
+        if (commentInput) {
+          commentInput.scrollIntoView({ behavior: "smooth", block: "center" });
+          commentInput.focus();
+          const len = commentInput.value?.length ?? 0;
+          commentInput.setSelectionRange?.(len, len);
+          return;
+        }
+
+        const commentsEl = document.getElementById("comments");
+        if (commentsEl) {
+          commentsEl.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
     }
   }, [location.hash, commentsLoading]);
 
   // ---- Handlers ----
   const handleEditOpen = () => {
     setEditForm({ title: thread.title, description: thread.description || "" });
+    setEditImageFile(null);
+    setEditImagePreview(thread.image_url || "");
     setEditOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    updateMutation.mutate(editForm, { onSuccess: () => setEditOpen(false) });
+    try {
+      let image_url = thread.image_url;
+      if (editImageFile) {
+        const uploaded = await uploadThreadImage(editImageFile);
+        image_url = uploaded.image_url;
+      }
+      updateMutation.mutate(
+        { ...editForm, image_url },
+        { onSuccess: () => setEditOpen(false) }
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to upload image");
+    }
   };
 
   const handleCommentSubmit = () => {
-    const payload = { content: commentText };
-    if (replyTo) payload.parent_id = replyTo;
-    commentMutation.mutate(payload, {
+    commentMutation.mutate({ content: commentText }, {
       onSuccess: () => {
         setCommentText("");
-        setReplyTo(null);
       },
+    });
+  };
+
+  const handleReplySubmit = async (parentId, content) => {
+    await commentMutation.mutateAsync({
+      content,
+      parent_id: parentId,
     });
   };
 
@@ -105,6 +146,27 @@ export default function ThreadPage() {
 
   const commentTree = buildCommentTree(comments);
 
+  const filterCommentTree = (nodes, q) => {
+    if (!q) return nodes;
+    const needle = q.toLowerCase();
+
+    return nodes
+      .map((node) => {
+        const filteredReplies = filterCommentTree(node.replies || [], q);
+        const selfMatches =
+          (node.content || "").toLowerCase().includes(needle) ||
+          (node.author_username || "").toLowerCase().includes(needle);
+
+        if (selfMatches || filteredReplies.length > 0) {
+          return { ...node, replies: filteredReplies };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  };
+
+  const visibleCommentTree = filterCommentTree(commentTree, commentSearch);
+
   return (
     <PageWrapper>
       {/* Back button */}
@@ -125,6 +187,8 @@ export default function ThreadPage() {
         onDelete={() => {
           if (confirm("Delete this thread?")) deleteMutation.mutate();
         }}
+        likers={likersData?.items || []}
+        likersLoading={likersLoading}
       />
 
       {/* Comment form */}
@@ -134,20 +198,24 @@ export default function ThreadPage() {
           onChange={setCommentText}
           onSubmit={handleCommentSubmit}
           loading={commentMutation.isPending}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
         />
       )}
 
       {/* Comments */}
       <CommentTree
-        comments={commentTree}
+        comments={visibleCommentTree}
         threadId={threadId}
+        threadAuthorId={thread?.author_id}
         loading={commentsLoading}
-        onReply={(commentId) => {
-          setReplyTo(commentId);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
+        searchBar={
+          <SearchBar
+            placeholder="Search comments in this thread..."
+            onSearch={setCommentSearch}
+            onChangeSearch={setCommentSearch}
+            className="mb-3"
+          />
+        }
+        onReply={handleReplySubmit}
       />
 
       {/* Edit modal */}
@@ -182,6 +250,32 @@ export default function ThreadPage() {
                 placeholder-gray-400 resize-y
                 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Image (optional)
+            </label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setEditImageFile(file);
+                setEditImagePreview(URL.createObjectURL(file));
+              }}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5
+                file:text-xs file:font-medium file:text-indigo-600 hover:file:bg-indigo-100
+                focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            {editImagePreview && (
+              <img
+                src={editImagePreview}
+                alt="Thread edit preview"
+                className="mt-2 max-h-48 w-full object-cover rounded-lg border border-gray-100"
+              />
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button

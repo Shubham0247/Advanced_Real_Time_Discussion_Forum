@@ -84,10 +84,17 @@ class ThreadService:
             thread.comment_count = int(count_map.get(thread.id, 0))
 
 
-    def create_thread(self, title: str, description: str, author_id: UUID) -> Thread:
+    def create_thread(
+        self,
+        title: str,
+        description: str,
+        author_id: UUID,
+        image_url: str | None = None,
+    ) -> Thread:
         thread = Thread(
             title=title.strip(),
             description=description.strip(),
+            image_url=image_url,
             author_id=author_id,
         )
 
@@ -106,6 +113,7 @@ class ThreadService:
             payload={
                 "id": str(created_thread.id),
                 "title": created_thread.title,
+                "image_url": created_thread.image_url,
             },
         )
 
@@ -146,10 +154,20 @@ class ThreadService:
         return thread
 
 
-    def list_threads(self, page: int, size: int, current_user):
+    def list_threads(
+        self,
+        page: int,
+        size: int,
+        current_user,
+        moderation_status: str | None = None,
+    ):
         skip = (page - 1) * size
-        threads = self.thread_repo.list_threads(skip, size)
-        total = self.thread_repo.count_threads()
+        if moderation_status is None:
+            threads = self.thread_repo.list_threads(skip, size)
+            total = self.thread_repo.count_threads()
+        else:
+            threads = self.thread_repo.list_threads(skip, size, moderation_status=moderation_status)
+            total = self.thread_repo.count_threads(moderation_status=moderation_status)
 
         like_repo = LikeRepository(self.db)
 
@@ -170,10 +188,26 @@ class ThreadService:
             "items": threads,
         }
 
-    def search_threads(self, keyword: str, page: int, size: int, current_user):
+    def search_threads(
+        self,
+        keyword: str,
+        page: int,
+        size: int,
+        current_user,
+        moderation_status: str | None = None,
+    ):
         skip = (page - 1) * size
-        threads = self.thread_repo.search_threads(keyword, skip, size)
-        total = self.thread_repo.count_search_threads(keyword)
+        if moderation_status is None:
+            threads = self.thread_repo.search_threads(keyword, skip, size)
+            total = self.thread_repo.count_search_threads(keyword)
+        else:
+            threads = self.thread_repo.search_threads(
+                keyword,
+                skip,
+                size,
+                moderation_status=moderation_status,
+            )
+            total = self.thread_repo.count_search_threads(keyword, moderation_status=moderation_status)
 
         like_repo = LikeRepository(self.db)
 
@@ -183,6 +217,47 @@ class ThreadService:
                 like_repo.is_thread_liked_by_user(thread.id, current_user.id)
                 if current_user
                 else False
+            )
+        self._attach_comment_counts_for_threads(threads)
+        self._attach_author_data_for_threads(threads)
+
+        return {
+            "total": total,
+            "page": page,
+            "size": size,
+            "items": threads,
+        }
+
+    def update_moderation_status(self, thread_id: UUID, moderation_status: str):
+        allowed = {"pending", "reported", "approved"}
+        moderation_status = moderation_status.strip().lower()
+        if moderation_status not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid moderation status",
+            )
+
+        thread = self.thread_repo.get_by_id(thread_id)
+        if not thread:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Thread not found",
+            )
+
+        thread.moderation_status = moderation_status
+        return self.thread_repo.update(thread)
+
+    def list_my_threads(self, page: int, size: int, current_user):
+        skip = (page - 1) * size
+        threads = self.thread_repo.list_threads_by_author(current_user.id, skip, size)
+        total = self.thread_repo.count_threads_by_author(current_user.id)
+
+        like_repo = LikeRepository(self.db)
+        for thread in threads:
+            thread.like_count = like_repo.count_thread_likes(thread.id)
+            thread.is_liked_by_current_user = like_repo.is_thread_liked_by_user(
+                thread.id,
+                current_user.id,
             )
         self._attach_comment_counts_for_threads(threads)
         self._attach_author_data_for_threads(threads)
@@ -222,6 +297,9 @@ class ThreadService:
         if "description" in data:
             thread.description = data["description"].strip()
 
+        if "image_url" in data:
+            thread.image_url = data["image_url"]
+
         if "is_locked" in data:
             if "moderator" not in user_roles and "admin" not in user_roles:
                 raise HTTPException(
@@ -251,6 +329,7 @@ class ThreadService:
                 "id": str(thread.id),
                 "title": thread.title,
                 "description": thread.description,
+                "image_url": thread.image_url,
                 "is_locked": thread.is_locked,
             },
         )

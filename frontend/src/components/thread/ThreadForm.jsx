@@ -10,6 +10,7 @@ import MentionInput from "../mention/MentionInput";
 export default function ThreadForm({
   initialTitle = "",
   initialDescription = "",
+  initialImageUrl = "",
   onSubmit,
   loading = false,
   onCancel,
@@ -17,6 +18,8 @@ export default function ThreadForm({
 }) {
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(initialImageUrl);
   const [errors, setErrors] = useState({});
 
   const validate = () => {
@@ -29,7 +32,7 @@ export default function ThreadForm({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit({ title, description });
+    onSubmit({ title, description, imageFile });
   };
 
   return (
@@ -56,6 +59,37 @@ export default function ThreadForm({
         rows={6}
       />
 
+      <div>
+        <label
+          htmlFor="thread_image"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Image (optional)
+        </label>
+        <input
+          id="thread_image"
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+          }}
+          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+            file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5
+            file:text-xs file:font-medium file:text-indigo-600 hover:file:bg-indigo-100
+            focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        />
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Thread preview"
+            className="mt-2 max-h-64 w-full object-cover rounded-lg border border-gray-100"
+          />
+        )}
+      </div>
+
       <div className="flex items-center gap-3 pt-2">
         <Button type="submit" loading={loading}>
           {submitLabel}
@@ -73,6 +107,7 @@ export default function ThreadForm({
 ThreadForm.propTypes = {
   initialTitle: PropTypes.string,
   initialDescription: PropTypes.string,
+  initialImageUrl: PropTypes.string,
   onSubmit: PropTypes.func.isRequired,
   loading: PropTypes.bool,
   onCancel: PropTypes.func,

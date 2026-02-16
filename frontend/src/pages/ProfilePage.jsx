@@ -71,11 +71,11 @@ export default function ProfilePage() {
 
   return (
     <PageWrapper className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-gray-900 mb-6">Your Profile</h1>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
           <Avatar name={form.full_name || user.full_name} avatarUrl={avatarPreview} size="lg" />
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
@@ -162,6 +162,7 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
+
     </PageWrapper>
   );
 }

@@ -10,7 +10,9 @@ import EmptyState from "../common/EmptyState";
 export default function CommentTree({
   comments,
   threadId,
+  threadAuthorId,
   loading,
+  searchBar = null,
   onReply,
 }) {
   return (
@@ -18,6 +20,7 @@ export default function CommentTree({
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         Comments {comments.length > 0 && `(${comments.length})`}
       </h2>
+      {searchBar}
 
       {loading ? (
         <div className="flex justify-center py-8">
@@ -36,6 +39,7 @@ export default function CommentTree({
               key={comment.id}
               comment={comment}
               threadId={threadId}
+              threadAuthorId={threadAuthorId}
               onReply={onReply}
               depth={0}
             />
@@ -49,6 +53,8 @@ export default function CommentTree({
 CommentTree.propTypes = {
   comments: PropTypes.array.isRequired,
   threadId: PropTypes.string.isRequired,
+  threadAuthorId: PropTypes.string,
   loading: PropTypes.bool,
+  searchBar: PropTypes.node,
   onReply: PropTypes.func.isRequired,
 };

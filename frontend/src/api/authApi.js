@@ -50,6 +50,19 @@ export const updateProfile = (payload) =>
   authClient.patch("/users/me", payload).then((r) => r.data);
 
 /**
+ * Change current user's password.
+ * @param {{ current_password: string, new_password: string }} payload
+ */
+export const changeMyPassword = (payload) =>
+  authClient.post("/users/me/change-password", payload).then((r) => r.data);
+
+/**
+ * Deactivate current user's account.
+ */
+export const deactivateMyAccount = () =>
+  authClient.post("/users/me/deactivate").then((r) => r.data);
+
+/**
  * Upload avatar image from local device.
  * @param {File} file
  */
@@ -79,6 +92,12 @@ export const suggestMentionUsers = (q, limit = 8) =>
  */
 export const resolveMentions = (usernames) =>
   authClient.post("/users/mentions/resolve", { usernames }).then((r) => r.data);
+
+/**
+ * Search users (public searchable fields).
+ */
+export const searchUsers = ({ q, page = 1, size = 10 }) =>
+  authClient.get("/users/search", { params: { q, page, size } }).then((r) => r.data);
 
 // ---- Admin endpoints ----
 

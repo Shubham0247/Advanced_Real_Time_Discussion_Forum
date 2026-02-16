@@ -1,9 +1,11 @@
 import logging
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-from pathlib import Path
 
 from backend.services.auth_service.app.api.health import router as health_router
 from backend.services.auth_service.app.core.config import settings
@@ -20,11 +22,18 @@ setup_logging(settings.service_name, debug=settings.debug)
 
 logger = logging.getLogger(__name__)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
 
+def get_cors_origins() -> list[str]:
+    raw_origins = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    )
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     try:
-        with engine.connect() as connection:
+        with engine.connect():
             logger.info("Database connection successful.")
 
             Base.metadata.create_all(bind=engine)
@@ -36,8 +45,8 @@ async def lifespan(app: FastAPI):
 
             print("Roles seeded successfully.")
 
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.error("Database connection failed: %s", exc)
 
     yield
 
@@ -56,7 +65,7 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

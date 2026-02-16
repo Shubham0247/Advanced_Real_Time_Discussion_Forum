@@ -9,6 +9,7 @@ import useNotificationStore from "./stores/notificationStore";
 import useNotificationWebSocket from "./hooks/useNotificationWebSocket";
 import useFeedWebSocket from "./hooks/useFeedWebSocket";
 import { getUnreadCount } from "./api/notificationApi";
+import { applyTheme, getStoredTheme } from "./utils/theme";
 
 function AppContent() {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -20,12 +21,17 @@ function AppContent() {
     hydrate();
   }, [hydrate]);
 
+  // Apply persisted theme
+  useEffect(() => {
+    applyTheme(getStoredTheme());
+  }, []);
+
   // Fetch initial unread count
   const { data: unreadData } = useQuery({
     queryKey: ["unread-count"],
     queryFn: getUnreadCount,
     enabled: isAuthenticated,
-    refetchInterval: 30000, // poll every 30s as fallback
+    refetchInterval: 30000,
   });
 
   useEffect(() => {
@@ -42,7 +48,7 @@ function AppContent() {
 
   // Determine if we're on an auth page (no navbar)
   const authPages = ["/login", "/register", "/forgot-password", "/reset-password"];
-  const isAuthPage = authPages.some((p) => location.pathname.startsWith(p));
+  const isAuthPage = authPages.some((page) => location.pathname.startsWith(page));
 
   return (
     <div className="min-h-screen bg-gray-50">

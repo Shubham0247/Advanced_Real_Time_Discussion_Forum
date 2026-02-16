@@ -5,6 +5,7 @@ import useWebSocket from "./useWebSocket";
 import useNotificationStore from "../stores/notificationStore";
 import { WS_URLS } from "../utils/constants";
 import { tokenStorage } from "../utils/tokenStorage";
+import { getUnreadCount } from "../api/notificationApi";
 
 /**
  * Global notification WebSocket.
@@ -13,15 +14,27 @@ import { tokenStorage } from "../utils/tokenStorage";
  */
 export default function useNotificationWebSocket() {
   const queryClient = useQueryClient();
-  const { increment } = useNotificationStore();
+  const { setUnreadCount } = useNotificationStore();
   const token = tokenStorage.getAccessToken();
 
   const url = token ? WS_URLS.NOTIFICATIONS(token) : null;
 
   const handleMessage = useCallback(
-    (data) => {
-      increment();
+    async (data) => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+
+      // Always sync unread badge from server to avoid count drift/races.
+      try {
+        const unreadData = await queryClient.fetchQuery({
+          queryKey: ["unread-count"],
+          queryFn: getUnreadCount,
+          staleTime: 0,
+        });
+        setUnreadCount(unreadData?.unread_count ?? 0);
+      } catch {
+        // Ignore transient failures; polling fallback will recover.
+      }
 
       // Show a toast for certain event types
       const msg = data.payload?.message || data.message;
@@ -33,7 +46,7 @@ export default function useNotificationWebSocket() {
         });
       }
     },
-    [increment, queryClient]
+    [queryClient, setUnreadCount]
   );
 
   useWebSocket(url, handleMessage);

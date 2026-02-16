@@ -13,3 +13,10 @@ export const toggleThreadLike = (threadId) =>
  */
 export const toggleCommentLike = (commentId) =>
   discussionClient.post(`/likes/comment/${commentId}`).then((r) => r.data);
+
+/**
+ * Get users who liked a thread.
+ * @param {string} threadId
+ */
+export const getThreadLikers = (threadId) =>
+  discussionClient.get(`/likes/thread/${threadId}/users`).then((r) => r.data);

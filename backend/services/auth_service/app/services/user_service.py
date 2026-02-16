@@ -67,9 +67,12 @@ class UserService:
         return self.user_repo.create(new_user)
 
     def authenticate_user(self, email: str, password: str):
-        user = self.user_repo.get_by_email(email.lower())
+        user = self.user_repo.get_by_email_or_username(email)
     
         if not user:
+            return None
+
+        if not getattr(user, "is_active", True):
             return None
 
         if not self.verify_password(password, user.hashed_password):
@@ -111,6 +114,17 @@ class UserService:
         user = self.user_repo.get_by_id(user_id)
         if not user:
             raise ValueError("Invalid reset token")
+
+        user.hashed_password = self._hash_password(new_password)
+        self.db.commit()
+        self.db.refresh(user)
+
+    def change_password(self, user, current_password: str, new_password: str) -> None:
+        if not self.verify_password(current_password, user.hashed_password):
+            raise ValueError("Current password is incorrect")
+
+        if current_password == new_password:
+            raise ValueError("New password must be different from current password")
 
         user.hashed_password = self._hash_password(new_password)
         self.db.commit()

@@ -93,6 +93,12 @@ def get_current_user(
             detail="User not found",
         )
 
+    if not getattr(user, "is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated",
+        )
+
     return user
 
 def create_new_access_token_from_refresh(refresh_token: str):

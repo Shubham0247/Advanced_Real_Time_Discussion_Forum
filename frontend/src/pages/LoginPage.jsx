@@ -6,6 +6,7 @@ import Input from "../components/common/Input";
 import Button from "../components/common/Button";
 import { login } from "../api/authApi";
 import useAuthStore from "../stores/authStore";
+import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function LoginPage() {
 
   const validate = () => {
     const e = {};
-    if (!form.email) e.email = "Email is required";
+    if (!form.email) e.email = "Email or username is required";
     if (!form.password) e.password = "Password is required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -34,8 +35,7 @@ export default function LoginPage() {
       toast.success("Welcome back!");
       navigate("/");
     } catch (err) {
-      const msg =
-        err.response?.data?.detail || "Login failed. Check your credentials.";
+      const msg = getApiErrorMessage(err, "Login failed. Check your credentials.");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -52,9 +52,9 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           id="email"
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
+          label="Email or Username"
+          type="text"
+          placeholder="you@example.com or username"
           value={form.email}
           onChange={handleChange("email")}
           error={errors.email}

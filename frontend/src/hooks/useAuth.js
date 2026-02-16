@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { login as loginApi, register as registerApi } from "../api/authApi";
 import useAuthStore from "../stores/authStore";
+import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
 /**
  * Hook that wraps authentication actions with loading/error state.
@@ -21,8 +22,7 @@ export default function useAuth() {
       toast.success("Welcome back!");
       navigate("/");
     } catch (err) {
-      const msg =
-        err.response?.data?.detail || "Login failed. Check your credentials.";
+      const msg = getApiErrorMessage(err, "Login failed. Check your credentials.");
       toast.error(msg);
       throw err;
     } finally {
@@ -37,14 +37,7 @@ export default function useAuth() {
       toast.success("Account created! Please sign in.");
       navigate("/login");
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      if (typeof detail === "string") {
-        toast.error(detail);
-      } else if (Array.isArray(detail)) {
-        toast.error(detail[0]?.msg || "Validation error");
-      } else {
-        toast.error("Registration failed. Please try again.");
-      }
+      toast.error(getApiErrorMessage(err, "Registration failed. Please try again."));
       throw err;
     } finally {
       setLoading(false);

@@ -10,8 +10,6 @@ export default function CommentForm({
   onChange,
   onSubmit,
   loading = false,
-  replyTo = null,
-  onCancelReply,
 }) {
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -24,19 +22,6 @@ export default function CommentForm({
       onSubmit={handleSubmit}
       className="mt-6 bg-white rounded-xl border border-gray-100 p-4"
     >
-      {replyTo && (
-        <div className="flex items-center gap-2 mb-2 text-xs text-indigo-600">
-          <span>Replying to a comment</span>
-          <button
-            type="button"
-            onClick={onCancelReply}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
       <MentionInput
         id="comment-input"
         placeholder="Write a comment... Use @username to mention someone"
@@ -64,6 +49,4 @@ CommentForm.propTypes = {
   onChange: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   loading: PropTypes.bool,
-  replyTo: PropTypes.string,
-  onCancelReply: PropTypes.func,
 };

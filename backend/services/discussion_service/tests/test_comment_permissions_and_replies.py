@@ -144,6 +144,55 @@ def test_moderator_can_update_and_delete_any_comment(monkeypatch):
     assert repo.deleted is True
 
 
+def test_update_populates_like_fields_for_response(monkeypatch):
+    db = SimpleNamespace(scalar=lambda *_args, **_kwargs: None)
+    service = CommentService(db)
+    owner_id = uuid4()
+    comment = _make_comment(owner_id)
+
+    class FakeRepo:
+        def get_by_id(self, _cid):
+            return comment
+
+        def update(self, c):
+            return c
+
+    class FakeLikeRepository:
+        def __init__(self, _db):
+            pass
+
+        def count_comment_likes(self, _comment_id):
+            return 2
+
+        def is_comment_liked_by_user(self, _comment_id, _user_id):
+            return True
+
+    service.repo = FakeRepo()
+    monkeypatch.setattr(
+        "backend.services.discussion_service.app.services.comment_service.LikeRepository",
+        FakeLikeRepository,
+    )
+    monkeypatch.setattr(
+        "backend.services.discussion_service.app.services.comment_service.publish_event",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "backend.services.discussion_service.app.services.comment_service.extract_mentioned_usernames",
+        lambda _text: set(),
+    )
+    monkeypatch.setattr(
+        "backend.services.discussion_service.app.services.comment_service.publish_mention_events_for_usernames",
+        lambda *_args, **_kwargs: None,
+    )
+
+    member = SimpleNamespace(id=owner_id, roles=[SimpleNamespace(name="member")])
+    updated = service.update_comment(comment.id, "edited", member)
+
+    assert updated.like_count == 2
+    assert updated.is_liked_by_current_user is True
+    assert isinstance(updated.replies, list)
+
+
 def test_non_owner_member_cannot_update_or_delete_comment():
     db = SimpleNamespace()
     service = CommentService(db)

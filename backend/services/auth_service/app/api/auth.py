@@ -23,32 +23,32 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     try:
         user = user_service.create_user(user_data)
         return user
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+            detail=str(exc),
+        ) from exc
 
 @router.post("/login",response_model=TokenResponse)
 def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
 
     try:
-        access_token, refresh_token = user_service.login_user(
+        access_token, refresh_token_value = user_service.login_user(
             login_data.email,
             login_data.password,
         )
 
         return TokenResponse(
             access_token=access_token,
-            refresh_token=refresh_token,
+            refresh_token=refresh_token_value,
         )
-    
-    except ValueError:
+
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
-        )
+        ) from exc
 
 @router.post("/refresh")
 def refresh_token(data: RefreshRequest):
@@ -79,11 +79,11 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
 
     try:
         user_service.reset_password(data.reset_token, data.new_password)
-    except (ValueError, HTTPException) as e:
-        detail = str(e) if isinstance(e, ValueError) else e.detail
+    except (ValueError, HTTPException) as exc:
+        detail = str(exc) if isinstance(exc, ValueError) else exc.detail
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=detail,
-        )
+        ) from exc
 
     return {"message": "Password reset successful"}

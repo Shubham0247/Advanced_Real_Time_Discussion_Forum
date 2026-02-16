@@ -28,9 +28,9 @@ class CommentRead(BaseModel):
     is_deleted: bool
     created_at: datetime
     updated_at: datetime
-    like_count: int
-    is_liked_by_current_user: bool
-    replies: List["CommentRead"] = []
+    like_count: int = 0
+    is_liked_by_current_user: bool = False
+    replies: List["CommentRead"] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

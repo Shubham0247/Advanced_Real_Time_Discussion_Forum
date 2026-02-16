@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 export default function SearchBar({
   placeholder = "Search...",
   onSearch,
+  onChangeSearch,
   initialValue = "",
   className = "",
 }) {
@@ -24,7 +25,11 @@ export default function SearchBar({
       <input
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value;
+          setValue(next);
+          if (onChangeSearch) onChangeSearch(next.trim());
+        }}
         placeholder={placeholder}
         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-sm
           placeholder-gray-400 shadow-sm transition-colors
@@ -37,6 +42,7 @@ export default function SearchBar({
 SearchBar.propTypes = {
   placeholder: PropTypes.string,
   onSearch: PropTypes.func.isRequired,
+  onChangeSearch: PropTypes.func,
   initialValue: PropTypes.string,
   className: PropTypes.string,
 };

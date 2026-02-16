@@ -20,14 +20,17 @@ export default function NotificationItem({ notification, onMarkRead, onOpen }) {
   return (
     <div
       onClick={() => onOpen(notification)}
-      className={`flex items-start gap-3 p-4 rounded-xl border transition-colors
+      className={`relative flex items-start gap-3 p-4 rounded-xl border transition-colors
         cursor-pointer
         ${
           notification.is_read
-            ? "bg-white border-gray-100"
-            : "bg-indigo-50/40 border-indigo-100"
+            ? "bg-white border-gray-200 hover:border-gray-300"
+            : "bg-indigo-50/40 border-indigo-200"
         }`}
     >
+      {!notification.is_read && (
+        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r bg-indigo-500" />
+      )}
       <div
         className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${config.color}`}
       >
@@ -35,7 +38,7 @@ export default function NotificationItem({ notification, onMarkRead, onOpen }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800">{notification.message}</p>
+        <p className="text-sm text-gray-800 leading-6">{notification.message}</p>
         <p className="text-xs text-gray-400 mt-1">
           {config.label} &middot; {formatDate(notification.created_at)}
         </p>

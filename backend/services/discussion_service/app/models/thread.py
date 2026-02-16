@@ -28,6 +28,11 @@ class Thread(Base):
         nullable=False,
     )
 
+    image_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
     author_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -59,6 +64,13 @@ class Thread(Base):
         Boolean,
         default=False,
         nullable=False,
+    )
+
+    moderation_status: Mapped[str] = mapped_column(
+        String(30),
+        default="pending",
+        nullable=False,
+        index=True,
     )
 
     comments = relationship(

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   getThreads,
+  getMyThreads,
   getThread,
   createThread,
   updateThread,
@@ -19,6 +20,17 @@ export function useThreadList(page) {
   return useQuery({
     queryKey: ["threads", page],
     queryFn: () => getThreads({ page, size: PAGE_SIZES.THREADS }),
+    keepPreviousData: true,
+  });
+}
+
+/**
+ * Hook for paginated current user's thread list.
+ */
+export function useMyThreadList(page) {
+  return useQuery({
+    queryKey: ["my-threads", page],
+    queryFn: () => getMyThreads({ page, size: PAGE_SIZES.THREADS }),
     keepPreviousData: true,
   });
 }

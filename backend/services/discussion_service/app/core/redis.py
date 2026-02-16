@@ -1,9 +1,17 @@
 import redis
 import json
+import os
+
+
+def get_redis_port() -> int:
+    try:
+        return int(os.getenv("REDIS_PORT", "6379"))
+    except ValueError:
+        return 6379
 
 redis_client = redis.Redis(
-    host="localhost",
-    port=6379,
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=get_redis_port(),
     decode_responses=True
 )
 

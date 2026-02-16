@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useThreadMutations } from "../hooks/useThreads";
+import { uploadThreadImage } from "../api/threadApi";
 import PageWrapper from "../components/layout/PageWrapper";
 import ThreadForm from "../components/thread/ThreadForm";
 
@@ -14,7 +16,22 @@ export default function CreateThreadPage() {
       </h1>
 
       <ThreadForm
-        onSubmit={(data) => createMutation.mutate(data)}
+        onSubmit={async (data) => {
+          try {
+            let image_url;
+            if (data.imageFile) {
+              const uploaded = await uploadThreadImage(data.imageFile);
+              image_url = uploaded.image_url;
+            }
+            createMutation.mutate({
+              title: data.title,
+              description: data.description,
+              image_url,
+            });
+          } catch (err) {
+            toast.error(err.response?.data?.detail || "Failed to upload image");
+          }
+        }}
         loading={createMutation.isPending}
         onCancel={() => navigate("/")}
         submitLabel="Create Thread"

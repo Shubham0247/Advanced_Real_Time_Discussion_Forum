@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MessageSquareText } from "lucide-react";
+import { MessageSquareText } from "lucide-react";
 import { useThreadList } from "../hooks/useThreads";
 import { PAGE_SIZES } from "../utils/constants";
 import PageWrapper from "../components/layout/PageWrapper";
@@ -18,21 +18,13 @@ export default function HomePage() {
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZES.THREADS) : 0;
 
   return (
-    <PageWrapper>
+    <PageWrapper className="max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Discussions</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Browse and join the conversation
-          </p>
-        </div>
-        <Link to="/threads/new">
-          <Button size="md">
-            <Plus size={16} />
-            New Thread
-          </Button>
-        </Link>
+      <div className="mx-auto mb-7 w-full max-w-4xl">
+        <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Discussions</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Browse and join the conversation in real-time.
+        </p>
       </div>
 
       {/* Content */}
@@ -57,16 +49,18 @@ export default function HomePage() {
         />
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="mx-auto w-full max-w-3xl space-y-3">
             {threads.map((thread) => (
               <ThreadCard key={thread.id} thread={thread} />
             ))}
           </div>
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+          <div className="mx-auto w-full max-w-3xl">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
         </>
       )}
     </PageWrapper>
