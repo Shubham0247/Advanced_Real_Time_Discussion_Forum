@@ -5,8 +5,6 @@ from backend.services.auth_service.app.models.user import User
 from backend.services.auth_service.app.models.role import Role
 
 
-# SQLAlchemy's func.* is dynamically generated; pylint can't infer callability.
-# pylint: disable=not-callable
 class UserRepository:
     """
     Handles database operations related to User entity

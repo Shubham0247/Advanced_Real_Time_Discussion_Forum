@@ -11,11 +11,13 @@ class ReportService:
     VALID_STATUSES = {"reported", "pending", "approved"}
 
     def __init__(self, db: Session):
+        """Initialize the report service with repository and thread dependencies."""
         self.db = db
         self.repo = ReportRepository(db)
         self.thread_service = ThreadService(db)
 
     def report_thread(self, thread_id: UUID, reporter_id: UUID, reason: str | None = None):
+        """Create a report for a thread and mark the thread as reported."""
         thread = self.thread_service.get_thread(thread_id)
         if thread.author_id == reporter_id:
             raise HTTPException(
@@ -42,6 +44,7 @@ class ReportService:
         return created
 
     def list_reports(self, *, status_filter: str, q: str | None, page: int, size: int):
+        """Return paginated reports filtered by status and optional query."""
         status_value = (status_filter or "reported").strip().lower()
         if status_value not in self.VALID_STATUSES:
             raise HTTPException(
@@ -77,6 +80,7 @@ class ReportService:
         }
 
     def update_report_status(self, report_id: UUID, status_value: str):
+        """Update the status of a report after validating allowed values."""
         status_value = status_value.strip().lower()
         if status_value not in self.VALID_STATUSES:
             raise HTTPException(

@@ -27,6 +27,9 @@ All protected REST endpoints require:
 - `POST /auth/refresh`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
+  - Reset flow now uses email OTP.
+  - `forgot-password` body: `{ "email": "user@example.com" }`
+  - `reset-password` body: `{ "email": "user@example.com", "otp": "123456", "new_password": "..." }`
 
 ### Users
 

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -107,9 +107,9 @@ def test_auth_forgot_password_and_reset(monkeypatch):
             pass
 
         def request_password_reset(self, _email):
-            return "reset-token-123"
+            return None
 
-        def reset_password(self, _token, _new_password):
+        def reset_password(self, _email, _otp, _new_password):
             return None
 
     monkeypatch.setattr(auth_api, "UserService", FakeUserService)
@@ -119,11 +119,15 @@ def test_auth_forgot_password_and_reset(monkeypatch):
         db=object(),
     )
     out_reset = auth_api.reset_password(
-        ResetPasswordRequest(reset_token="reset-token-123", new_password="newpassword123"),
+        ResetPasswordRequest(
+            email="alice@example.com",
+            otp="123456",
+            new_password="newpassword123",
+        ),
         db=object(),
     )
 
-    assert out_forgot.reset_token == "reset-token-123"
+    assert "message" in out_forgot.model_dump()
     assert "message" in out_reset
 
 
@@ -132,14 +136,18 @@ def test_auth_reset_password_errors(monkeypatch):
         def __init__(self, _db):
             pass
 
-        def reset_password(self, _token, _new_password):
-            raise ValueError("Invalid reset token")
+        def reset_password(self, _email, _otp, _new_password):
+            raise ValueError("Invalid or expired OTP")
 
     monkeypatch.setattr(auth_api, "UserService", FakeUserService)
 
     with pytest.raises(HTTPException) as e:
         auth_api.reset_password(
-            ResetPasswordRequest(reset_token="bad", new_password="newpassword123"),
+            ResetPasswordRequest(
+                email="alice@example.com",
+                otp="000000",
+                new_password="newpassword123",
+            ),
             db=object(),
         )
     assert e.value.status_code == 400
@@ -639,7 +647,13 @@ def test_user_service_authenticate_user_paths():
 
 
 def test_user_service_password_reset_paths(monkeypatch):
-    user = SimpleNamespace(id=uuid4(), hashed_password="old-hash")
+    user = SimpleNamespace(id=uuid4(), hashed_password="old-hash", email="alice@example.com")
+    otp_record = SimpleNamespace(
+        otp_hash="otp-hash",
+        used_at=None,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+        attempt_count=0,
+    )
 
     class FakeDB:
         def __init__(self):
@@ -656,31 +670,36 @@ def test_user_service_password_reset_paths(monkeypatch):
     service = UserService(FakeDB())
     service.user_repo = SimpleNamespace(
         get_by_email=lambda _e: user,
-        get_by_id=lambda _uid: user,
     )
+    monkeypatch.setattr(service, "_generate_password_reset_otp", lambda: "123456")
+    stored = {"called": False}
     monkeypatch.setattr(
-        "backend.services.auth_service.app.services.user_service.create_password_reset_token",
-        lambda **_kwargs: "reset-token",
+        service,
+        "_store_password_reset_otp",
+        lambda _user_id, _otp: stored.__setitem__("called", True),
     )
+    monkeypatch.setattr(service, "_get_latest_password_reset_otp", lambda _uid: otp_record)
     monkeypatch.setattr(
-        "backend.services.auth_service.app.services.user_service.get_user_id_from_reset_token",
-        lambda _token: str(user.id),
+        "backend.services.auth_service.app.services.user_service.send_password_reset_otp_email",
+        lambda _email, _otp: None,
     )
+    monkeypatch.setattr(service, "verify_password", lambda _otp, _hash: True)
     monkeypatch.setattr(service, "_hash_password", lambda _p: "new-hash")
 
-    token = service.request_password_reset("alice@example.com")
-    service.reset_password("reset-token", "newpassword123")
+    service.request_password_reset("alice@example.com")
+    service.reset_password("alice@example.com", "123456", "newpassword123")
 
-    assert token == "reset-token"
+    assert stored["called"] is True
+    assert otp_record.used_at is not None
     assert user.hashed_password == "new-hash"
     assert service.db.commits == 1
     assert service.db.refreshed == 1
 
-    service.user_repo = SimpleNamespace(get_by_email=lambda _e: None, get_by_id=lambda _uid: None)
+    service.user_repo = SimpleNamespace(get_by_email=lambda _e: None)
     assert service.request_password_reset("missing@example.com") is None
 
     with pytest.raises(ValueError):
-        service.reset_password("bad-token", "newpassword123")
+        service.reset_password("missing@example.com", "123456", "newpassword123")
 
 
 def test_user_schema_models_construct():

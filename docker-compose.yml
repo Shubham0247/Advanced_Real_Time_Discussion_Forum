@@ -11,7 +11,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DOCKER_POSTGRES_USER:-forum} -d ${DOCKER_POSTGRES_DB:-forumdb}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DOCKER_POSTGRES_USER:-forum} -d ${DOCKER_POSTGRES_DB:-forumdb}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -33,6 +37,8 @@ services:
       dockerfile: docker/backend.Dockerfile
     container_name: forum-auth
     command: uvicorn backend.services.auth_service.app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env.docker
     environment:
       DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql+psycopg2://forum:forum@postgres:5432/forumdb}
       SECRET_KEY: ${DOCKER_SECRET_KEY:-replace-with-a-long-random-secret}
@@ -43,6 +49,14 @@ services:
       CORS_ORIGINS: ${DOCKER_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
       REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+      SMTP_HOST: ${DOCKER_SMTP_HOST:-}
+      SMTP_PORT: ${DOCKER_SMTP_PORT:-587}
+      SMTP_USERNAME: ${DOCKER_SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${DOCKER_SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${DOCKER_SMTP_FROM_EMAIL:-no-reply@example.com}
+      SMTP_USE_TLS: ${DOCKER_SMTP_USE_TLS:-true}
+      SMTP_USE_SSL: ${DOCKER_SMTP_USE_SSL:-false}
+
     ports:
       - "8000:8000"
     depends_on:
@@ -53,7 +67,13 @@ services:
     volumes:
       - auth_uploads:/app/backend/services/auth_service/app/uploads
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -86,7 +106,13 @@ services:
     volumes:
       - discussion_uploads:/app/backend/services/discussion_service/app/uploads
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 20

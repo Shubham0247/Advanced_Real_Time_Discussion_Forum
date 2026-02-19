@@ -47,7 +47,7 @@ export function buildCommentTree(flatComments) {
   // Backend currently returns a nested tree for thread comments.
   // If replies are already present, keep that structure as-is.
   const alreadyNested = flatComments.some(
-    (c) => Array.isArray(c.replies) && c.replies.length > 0
+    (comment) => Array.isArray(comment.replies) && comment.replies.length > 0
   );
   if (alreadyNested) {
     return flatComments;
@@ -55,14 +55,14 @@ export function buildCommentTree(flatComments) {
 
   const map = {};
   const roots = [];
-  flatComments.forEach((c) => {
-    map[c.id] = { ...c, replies: [] };
+  flatComments.forEach((comment) => {
+    map[comment.id] = { ...comment, replies: [] };
   });
-  flatComments.forEach((c) => {
-    if (c.parent_id && map[c.parent_id]) {
-      map[c.parent_id].replies.push(map[c.id]);
+  flatComments.forEach((comment) => {
+    if (comment.parent_id && map[comment.parent_id]) {
+      map[comment.parent_id].replies.push(map[comment.id]);
     } else {
-      roots.push(map[c.id]);
+      roots.push(map[comment.id]);
     }
   });
   return roots;

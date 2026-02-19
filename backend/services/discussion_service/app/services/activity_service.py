@@ -12,6 +12,7 @@ class ActivityService:
     VALID_TYPES = {"all", "like", "comment"}
 
     def __init__(self, db: Session):
+        """Initialize the activity service with its repository dependency."""
         self.repo = ActivityRepository(db)
 
     def list_my_activity(
@@ -23,6 +24,7 @@ class ActivityService:
         page: int,
         size: int,
     ):
+        """Return paginated user activity filtered by time range and type."""
         normalized = (range_key or "all").strip().lower()
         if normalized not in self.VALID_RANGES:
             raise HTTPException(

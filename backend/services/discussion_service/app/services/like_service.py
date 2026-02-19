@@ -14,12 +14,14 @@ from backend.services.auth_service.app.models.user import User
 class LikeService:
 
     def __init__(self, db: Session):
+        """Initialize the like service with repositories and thread service."""
         self.db = db
         self.repo = LikeRepository(db)
         self.thread_service = ThreadService(db)
         self.comment_repo = CommentRepository(db)
 
     def list_thread_likers(self, thread_id: UUID):
+        """List users who liked a thread in reverse chronological order."""
         # Validate thread exists
         self.thread_service.get_thread(thread_id)
 
@@ -45,6 +47,7 @@ class LikeService:
         }
 
     def toggle_thread_like(self, thread_id: UUID, user_id: UUID):
+        """Add or remove the current user's like on a thread and publish events."""
 
         thread = self.thread_service.get_thread(thread_id)
         existing = self.repo.get_thread_like(user_id, thread_id)
@@ -109,6 +112,7 @@ class LikeService:
             )
         
     def toggle_comment_like(self, comment_id: UUID, user_id: UUID):
+        """Add or remove the current user's like on a comment and publish events."""
         comment = self.comment_repo.get_by_id(comment_id)
         if not comment:
             raise HTTPException(status_code=404, detail="Comment not found")

@@ -65,11 +65,10 @@ def refresh_token(data: RefreshRequest):
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
-    reset_token = user_service.request_password_reset(data.email)
+    user_service.request_password_reset(data.email)
 
     return ForgotPasswordResponse(
-        message="If the account exists, a password reset token was generated.",
-        reset_token=reset_token,
+        message="If the account exists, an OTP has been sent to the registered email.",
     )
 
 
@@ -78,7 +77,7 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     user_service = UserService(db)
 
     try:
-        user_service.reset_password(data.reset_token, data.new_password)
+        user_service.reset_password(data.email, data.otp, data.new_password)
     except (ValueError, HTTPException) as exc:
         detail = str(exc) if isinstance(exc, ValueError) else exc.detail
         raise HTTPException(

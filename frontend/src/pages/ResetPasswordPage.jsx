@@ -9,10 +9,11 @@ import { resetPassword } from "../api/authApi";
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get("token") || "";
+  const emailFromQuery = searchParams.get("email") || "";
 
   const [form, setForm] = useState({
-    reset_token: token,
+    email: emailFromQuery,
+    otp: "",
     new_password: "",
     confirmPassword: "",
   });
@@ -21,7 +22,8 @@ export default function ResetPasswordPage() {
 
   const validate = () => {
     const e = {};
-    if (!form.reset_token) e.reset_token = "Reset token is required";
+    if (!form.email) e.email = "Email is required";
+    if (!form.otp) e.otp = "OTP is required";
     if (!form.new_password || form.new_password.length < 8)
       e.new_password = "Password must be at least 8 characters";
     if (form.new_password !== form.confirmPassword)
@@ -37,13 +39,14 @@ export default function ResetPasswordPage() {
     setLoading(true);
     try {
       await resetPassword({
-        reset_token: form.reset_token,
+        email: form.email,
+        otp: form.otp,
         new_password: form.new_password,
       });
       toast.success("Password reset successfully! Please sign in.");
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Reset failed. Token may be expired.");
+      toast.error(err.response?.data?.detail || "Reset failed. OTP may be invalid or expired.");
     } finally {
       setLoading(false);
     }
@@ -55,18 +58,27 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AuthLayout title="Set new password" subtitle="Enter your new password below">
+    <AuthLayout title="Set new password" subtitle="Enter OTP and your new password">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {!token && (
-          <Input
-            id="reset_token"
-            label="Reset Token"
-            placeholder="Paste your reset token"
-            value={form.reset_token}
-            onChange={handleChange("reset_token")}
-            error={errors.reset_token}
-          />
-        )}
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          placeholder="you@example.com"
+          value={form.email}
+          onChange={handleChange("email")}
+          error={errors.email}
+          autoFocus={!emailFromQuery}
+        />
+        <Input
+          id="otp"
+          label="OTP"
+          placeholder="Enter the OTP from your email"
+          value={form.otp}
+          onChange={handleChange("otp")}
+          error={errors.otp}
+          autoFocus={!!emailFromQuery}
+        />
         <Input
           id="new_password"
           label="New Password"
@@ -75,7 +87,6 @@ export default function ResetPasswordPage() {
           value={form.new_password}
           onChange={handleChange("new_password")}
           error={errors.new_password}
-          autoFocus={!!token}
         />
         <Input
           id="confirmPassword"

@@ -24,15 +24,15 @@ export const refreshToken = (refreshToken) =>
     .then((r) => r.data);
 
 /**
- * Request a password reset token.
+ * Request a password reset OTP.
  * @param {string} email
  */
 export const forgotPassword = (email) =>
   authClient.post("/auth/forgot-password", { email }).then((r) => r.data);
 
 /**
- * Reset password using token.
- * @param {{ reset_token: string, new_password: string }} payload
+ * Reset password using email + OTP.
+ * @param {{ email: string, otp: string, new_password: string }} payload
  */
 export const resetPassword = (payload) =>
   authClient.post("/auth/reset-password", payload).then((r) => r.data);

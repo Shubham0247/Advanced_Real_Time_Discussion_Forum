@@ -10,7 +10,6 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [resetToken, setResetToken] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,13 +17,9 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      const data = await forgotPassword(email);
+      await forgotPassword(email);
       setSent(true);
-      // In dev mode the API returns the reset_token directly
-      if (data.reset_token) {
-        setResetToken(data.reset_token);
-      }
-      toast.success("Reset instructions sent!");
+      toast.success("OTP sent to your email");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Something went wrong");
     } finally {
@@ -33,7 +28,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <AuthLayout title="Reset your password" subtitle="We'll send you a reset link">
+    <AuthLayout title="Reset your password" subtitle="We'll send you a one-time code">
       {!sent ? (
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -46,7 +41,7 @@ export default function ForgotPasswordPage() {
             autoFocus
           />
           <Button type="submit" loading={loading} className="w-full">
-            Send Reset Link
+            Send OTP
           </Button>
         </form>
       ) : (
@@ -57,20 +52,19 @@ export default function ForgotPasswordPage() {
             </svg>
           </div>
           <p className="text-sm text-gray-600">
-            Check your email for a password reset link.
+            Check your email for the password reset OTP.
           </p>
-          {resetToken && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Dev mode — reset token:</p>
-              <p className="text-xs text-gray-700 font-mono break-all">{resetToken}</p>
-              <Link
-                to={`/reset-password?token=${resetToken}`}
-                className="inline-block mt-2 text-sm text-indigo-600 hover:text-indigo-500 font-medium"
-              >
-                Go to Reset Page
-              </Link>
-            </div>
-          )}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-500 mb-1">
+              Enter the OTP on the reset password page.
+            </p>
+            <Link
+              to={`/reset-password?email=${encodeURIComponent(email)}`}
+              className="inline-block mt-2 text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+            >
+              Go to Reset Page
+            </Link>
+          </div>
         </div>
       )}
 

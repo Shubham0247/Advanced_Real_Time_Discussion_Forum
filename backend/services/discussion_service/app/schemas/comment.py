@@ -11,7 +11,7 @@ class CommentBase(BaseModel):
 class CommentCreate(CommentBase):
     parent_id: UUID | None = None
 
-
+      
 class CommentUpdate(BaseModel):
     content: str = Field(..., min_length=1)
 

@@ -18,11 +18,13 @@ class CommentService:
     DELETED_PLACEHOLDER = "This message has been deleted"
 
     def __init__(self, db: Session):
+        """Initialize the comment service with repositories and thread service."""
         self.db = db
         self.repo = CommentRepository(db)
         self.thread_service = ThreadService(db)
 
     def _attach_author_data_recursive(self, comment: Comment, users_by_id: dict) -> None:
+        """Recursively attach author metadata to a comment and its replies."""
         author_id = getattr(comment, "author_id", None)
         user = users_by_id.get(author_id)
         if user:
@@ -33,12 +35,14 @@ class CommentService:
             self._attach_author_data_recursive(reply, users_by_id)
 
     def _attach_author_data_for_tree(self, root_comments: list[Comment]) -> None:
+        """Load and attach author metadata for an entire comment tree."""
         if not root_comments or not hasattr(self.db, "scalars"):
             return
 
         author_ids: set[UUID] = set()
 
         def collect_ids(comment: Comment) -> None:
+            """Collect author ids from a comment subtree."""
             if hasattr(comment, "author_id"):
                 author_ids.add(comment.author_id)
             for reply in getattr(comment, "replies", []):
@@ -56,6 +60,7 @@ class CommentService:
             self._attach_author_data_recursive(root, users_by_id)
 
     def create_comment(self, thread_id: UUID, content: str, author_id: UUID, parent_id: UUID | None):
+        """Create a comment or reply, enrich it, and publish related events."""
         
         thread = self.thread_service.get_thread(thread_id)
         parent = None
@@ -148,6 +153,7 @@ class CommentService:
         return created_comment
     
     def _attach_like_data_recursive(self, comment, like_repo, current_user):
+        """Recursively attach like metadata for a comment tree node."""
         comment.like_count = like_repo.count_comment_likes(comment.id)
         comment.is_liked_by_current_user = like_repo.is_comment_liked_by_user(
             comment.id,
@@ -159,6 +165,7 @@ class CommentService:
 
 
     def get_thread_comments(self, thread_id: UUID, current_user):
+        """Return comments for a thread as a nested tree with metadata."""
         comments = self.repo.get_thread_comments(thread_id)
         like_repo = LikeRepository(self.db)
 
@@ -185,6 +192,7 @@ class CommentService:
         return tree
 
     def search_comments(self, keyword: str, page: int, size: int, current_user):
+        """Search comments by keyword and return paginated enriched results."""
         skip = (page - 1) * size
         comments = self.repo.search_comments(keyword, skip, size)
         total = self.repo.count_search_comments(keyword)
@@ -207,6 +215,7 @@ class CommentService:
         }
 
     def list_comments(self, page: int, size: int, current_user):
+        """Return paginated comments with author and like metadata."""
         skip = (page - 1) * size
         comments = self.repo.list_comments(skip, size)
         total = self.repo.count_comments()
@@ -230,6 +239,7 @@ class CommentService:
 
 
     def update_comment(self, comment_id: UUID, content: str, current_user):
+        """Update a comment after permission checks and emit update events."""
         comment = self.repo.get_by_id(comment_id)
 
         if not comment:
@@ -292,6 +302,7 @@ class CommentService:
         return updated_comment
 
     def delete_comment(self, comment_id: UUID, current_user):
+        """Delete or anonymize a comment depending on reply children and permissions."""
         comment = self.repo.get_by_id(comment_id)
 
         if not comment:
@@ -311,6 +322,7 @@ class CommentService:
             )
 
         def has_children(target_comment):
+            """Return whether a comment currently has child replies."""
             if hasattr(self.repo, "has_children"):
                 return self.repo.has_children(target_comment.id)
             return bool(getattr(target_comment, "replies", []))

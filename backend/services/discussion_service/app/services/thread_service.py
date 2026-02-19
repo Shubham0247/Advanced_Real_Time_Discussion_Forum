@@ -21,10 +21,12 @@ class ThreadService:
     """
 
     def __init__(self, db: Session):
+        """Initialize the thread service with a database session and repository."""
         self.db = db
         self.thread_repo = ThreadRepository(db)
 
     def _attach_author_data(self, thread: Thread) -> None:
+        """Populate author metadata on a single thread object when available."""
         if not hasattr(self.db, "scalar") or not hasattr(thread, "author_id"):
             return
         user = self.db.scalar(select(User).where(User.id == thread.author_id))
@@ -34,6 +36,7 @@ class ThreadService:
             thread.author_avatar = user.avatar_url
 
     def _attach_author_data_for_threads(self, threads: list[Thread]) -> None:
+        """Populate author metadata for a list of thread objects."""
         if not threads or not hasattr(self.db, "scalars"):
             return
         author_ids = {thread.author_id for thread in threads if hasattr(thread, "author_id")}
@@ -50,6 +53,7 @@ class ThreadService:
                 thread.author_avatar = user.avatar_url
 
     def _attach_comment_count(self, thread: Thread) -> None:
+        """Attach the non-deleted comment count to a single thread."""
         if not hasattr(self.db, "scalar") or not hasattr(thread, "id"):
             return
         thread.comment_count = (
@@ -63,6 +67,7 @@ class ThreadService:
         )
 
     def _attach_comment_counts_for_threads(self, threads: list[Thread]) -> None:
+        """Attach non-deleted comment counts for each thread in a list."""
         if not threads or not hasattr(self.db, "execute"):
             return
         thread_ids = [thread.id for thread in threads if hasattr(thread, "id")]
@@ -91,6 +96,7 @@ class ThreadService:
         author_id: UUID,
         image_url: str | None = None,
     ) -> Thread:
+        """Create a thread, publish events, and return enriched thread data."""
         thread = Thread(
             title=title.strip(),
             description=description.strip(),
@@ -132,6 +138,7 @@ class ThreadService:
 
 
     def get_thread(self, thread_id: UUID, current_user=None) -> Thread:
+        """Retrieve a thread by id and enrich it with like/comment metadata."""
 
         thread = self.thread_repo.get_by_id(thread_id)
         if not thread:
@@ -161,6 +168,7 @@ class ThreadService:
         current_user,
         moderation_status: str | None = None,
     ):
+        """Return a paginated list of threads with engagement and author data."""
         skip = (page - 1) * size
         if moderation_status is None:
             threads = self.thread_repo.list_threads(skip, size)
@@ -196,6 +204,7 @@ class ThreadService:
         current_user,
         moderation_status: str | None = None,
     ):
+        """Search threads by keyword and return paginated enriched results."""
         skip = (page - 1) * size
         if moderation_status is None:
             threads = self.thread_repo.search_threads(keyword, skip, size)
@@ -229,6 +238,7 @@ class ThreadService:
         }
 
     def update_moderation_status(self, thread_id: UUID, moderation_status: str):
+        """Validate and update moderation status for a thread."""
         allowed = {"pending", "reported", "approved"}
         moderation_status = moderation_status.strip().lower()
         if moderation_status not in allowed:
@@ -248,6 +258,7 @@ class ThreadService:
         return self.thread_repo.update(thread)
 
     def list_my_threads(self, page: int, size: int, current_user):
+        """List paginated threads created by the current user."""
         skip = (page - 1) * size
         threads = self.thread_repo.list_threads_by_author(current_user.id, skip, size)
         total = self.thread_repo.count_threads_by_author(current_user.id)
@@ -271,6 +282,7 @@ class ThreadService:
 
 
     def update_thread(self, thread_id: UUID, data: dict, current_user):
+        """Update a thread after permission checks and emit update events."""
 
         thread = self.thread_repo.get_by_id(thread_id)
         if not thread:
@@ -353,6 +365,7 @@ class ThreadService:
 
 
     def delete_thread(self, thread_id: UUID, current_user):
+        """Soft delete a thread after authorization checks and publish an event."""
 
         thread = self.thread_repo.get_by_id(thread_id)
         if not thread:

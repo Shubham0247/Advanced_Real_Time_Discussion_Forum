@@ -70,11 +70,11 @@ class ForgotPasswordRequest(BaseModel):
 
 class ForgotPasswordResponse(BaseModel):
     message: str
-    reset_token: str | None = None
 
 
 class ResetPasswordRequest(BaseModel):
-    reset_token: str
+    email: EmailStr
+    otp: str = Field(..., min_length=4, max_length=10)
     new_password: str = Field(..., min_length=8)
 
 
